@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react"
 import { CirclePlus, Trash, Info, Check, ChevronDown, ChevronUp, MoveRight, TriangleAlert, Save, ArrowRightFromLine } from 'lucide-react'
 import { toast } from 'react-toastify'
-import Loader from "./Loader";
+import Loader from "../components/Loader";
 import { validateUser } from "../api/reCalls";
-import LoginPopUp from "./LoginPopUp";
+import LoginPopUp from "../components/LoginPopUp";
 import { addQuizz } from "../api/quizzApi";
 import {useNavigate} from 'react-router-dom';
 import { useLocation } from "react-router-dom";
@@ -11,11 +11,13 @@ import { useLocation } from "react-router-dom";
 export default function QuizzManual({data}) {
   const navigate = useNavigate();
   const location = useLocation();
-  const urlData = location.state;
+  const urlData = location.state?.que;
+  const basic = location.state?.basic;
+  const settingId = location.state?.id;
   const [isLoading, setIsLoading] = useState({
     clickType: undefined,
   });
-  const [details, setDetails] = useState(urlData !== null ? urlData : [
+  const [details, setDetails] = useState(urlData ? urlData : [
     {
       question: "",
       type: "",
@@ -119,7 +121,7 @@ export default function QuizzManual({data}) {
         };
       }
       else if (details[index].type === 'option' || details[index].type === 'checkbox') {
-        const check = details[index].options.filter((option) => option.value.trim() === "");
+        const check = details[index].options.filter((option) => String(option.value).trim() === "");
         const check2 = details[index].options.filter((option) => option.answer === true);
         if (check.length !== 0) {
           if (show) toast.info("Please fill all options");
@@ -243,6 +245,32 @@ export default function QuizzManual({data}) {
     }
   }
 
+  const saveAndNext = () => {
+    setIsLoading({clickType: "saveandnext"});
+    const arr = verifiyData();
+    if (arr.includes(true)) {
+      toast.info("Fill All the Errors Mentioned");
+      setIsLoading({clickType: undefined});
+    }else {
+      const sendingData = details.map((question) => {
+        return {
+          question: question.question,
+          type: question.type,
+          options: question.options,
+        }
+      });
+      const sendingObj = {user: localStorage.getItem("id") , questions : [...sendingData]}
+      setIsLoading({clickType: undefined});
+      navigate("/create/security" , {
+        state: {
+          que: sendingObj,
+          settingId,
+          basic
+        }
+      });
+    }
+  }
+
   
 
   return (
@@ -268,13 +296,13 @@ export default function QuizzManual({data}) {
                 <div className={`flex w-max sm:hidden items-center gap-1 px-2 p-1 border borde-gray-200 rounded-sm font-semibold bg-[#3a3ded] text-white hover:bg-[#2848d9] ${isLoading.clickType !== undefined ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`} onClick={saveData} disabled={isLoading.clickType !== undefined} title="save">
                   <Save />
                 </div>
-                <div className={`hidden w-max sm:flex items-center gap-1 px-2 p-1 border borde-gray-200 rounded-sm font-semibold bg-[#3a3ded] text-white hover:bg-[#2848d9] ${isLoading.clickType !== undefined ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`} disabled={isLoading.clickType !== undefined}>
+                <div className={`hidden w-max sm:flex items-center gap-1 px-2 p-1 border borde-gray-200 rounded-sm font-semibold bg-[#3a3ded] text-white hover:bg-[#2848d9] ${isLoading.clickType !== undefined ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`} disabled={isLoading.clickType !== undefined} onClick={saveAndNext}>
                   {isLoading.clickType !== 'saveandnext' && <><span>Save & Next Step</span>
                     <span><MoveRight /></span></>}
                   {isLoading.clickType === 'saveandnext' && <><span>Processing...</span>
                     <span><MoveRight /></span></>}
                 </div>
-                <div className={`flex w-max sm:hidden items-center gap-1 px-2 p-1 border borde-gray-200 rounded-sm font-semibold bg-[#3a3ded] text-white hover:bg-[#2848d9] ${isLoading.clickType !== undefined ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`} disabled={isLoading.clickType !== undefined} title="save and next">
+                <div className={`flex w-max sm:hidden items-center gap-1 px-2 p-1 border borde-gray-200 rounded-sm font-semibold bg-[#3a3ded] text-white hover:bg-[#2848d9] ${isLoading.clickType !== undefined ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`} disabled={isLoading.clickType !== undefined} title="save and next" onClick={saveAndNext}>
                   <ArrowRightFromLine />
                 </div>
               </div>
@@ -356,7 +384,8 @@ export default function QuizzManual({data}) {
                             </div>}
 
                           {!question.minOption && (question.type === "option" || question.type === "checkbox") && question.options.map((option, index2) => {
-                            return <div className="flex items-center gap-2 w-full pl-5" key={index2}>
+                             
+                            return (String(option.value).toLowerCase() !== "n/a") ? <div className="flex items-center gap-2 w-full pl-5" key={index2}>
                               <div className="w-full flex gap-4 items-center">
                                 <div className={`flex item-center justify-center cursor-pointer text-black border border-white w-5 h-5 ${question.type === 'option' ? "rounded-full" : "rounded-xs"} ${option.answer === true && "bg-green-500"}`} onClick={() => { handleAnswerChange(index, index2) }}>
                                   {option.answer === true && <Check size={16} />}
@@ -366,7 +395,7 @@ export default function QuizzManual({data}) {
 
                               <p className="cursor-pointer text-green-600" onClick={() => handleAddOptions(index, index2)}><CirclePlus size={20} /></p>
                               {index2 !== 0 && <p className={`text-red-600 cursor-pointer`} onClick={() => handleDeleteOptions(index, index2)} ><Trash size={20} /></p>}
-                            </div>
+                            </div> : ""
                           })}
                           {question.type === 'textfield' && !question.minOption && <div className="flex items-center gap-1 text-[#00d9ff]">
                             <span>

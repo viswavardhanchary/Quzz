@@ -1,14 +1,28 @@
 const mongoose = require('mongoose');
 
 const QuizzSchema = new mongoose.Schema({
-  name : {
+  name: {
     type: String,
     default: ""
+  },
+  password: {
+    type: String,
+    default: ""
+  },
+  link: {
+    status: {
+      type: Boolean,
+      default: false,
+    },
+    address : {
+      type: String,
+      default: ""
+    }
   },
   questions: [
     {
       question: String,
-      type: {type: String},
+      type: { type: String },
       options: [
         {
           value: String,
@@ -21,16 +35,21 @@ const QuizzSchema = new mongoose.Schema({
     ref: "user",
     index: true
   },
-  created_on : {
-      day : {
-        type: String,
-        default : () => new Date().toLocaleDateString()
-      },
-      time: {
-        type: String,
-        default : () => new Date().toLocaleTimeString()
-      }
+  settings : {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "setting",
+    index: true
+  },
+  created_on: {
+    day: {
+      type: String,
+      default: () => new Date().toLocaleDateString()
+    },
+    time: {
+      type: String,
+      default: () => new Date().toLocaleTimeString()
     }
+  }
 });
 
 Quizzs = mongoose.model('quizz', QuizzSchema);

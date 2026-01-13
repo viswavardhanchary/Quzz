@@ -70,7 +70,9 @@ const addQuizz = async (req,res) => {
     });
   }
   try {
-    const result = await Quizzs.create({user: data.user , questions: data.questions});
+    console.log(data);
+    const result = await Quizzs.create({user: data.user , questions: data.questions , name: data.name , password: data.password , settings: data.setting , link: data.link});
+    console.log(result);
     if(result) {
       return res.status(200).send({
         message: "Added the Quizz",

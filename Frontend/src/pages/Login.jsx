@@ -1,7 +1,7 @@
 import { Eye, EyeOff, X, ArrowLeftToLine , CircleCheck, TriangleAlert  } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import Loader from './Loader';
+import Loader from '../components/Loader';
 import {verifyUser} from '../api/userApi';
 import {toast} from 'react-toastify';
 import { useNavigate } from 'react-router-dom';

@@ -2,11 +2,12 @@ import { useEffect, useState } from "react"
 import { getQuizzList, removeQuizz, updateOneQuizz } from "../api/quizzApi"
 import Loader from "./Loader";
 import { toast } from 'react-toastify'
-import { ChevronDown, ChevronUp, Forward, Pencil, Trash } from 'lucide-react';
+import { ChevronDown, ChevronUp, Forward, Pencil, Trash, X } from 'lucide-react';
 import PreviewQuzz from "./PreviewQuzz";
 import { makeData } from "../api/reCalls";
-import { useNavigate } from 'react-router-dom';
-export default function ListQuizz() {
+import { useNavigate, useOutletContext } from 'react-router-dom';
+export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen }) {
+  const { isStop, setIsStop } = useOutletContext()
   const navigate = useNavigate();
   const defaultLoading = {
     data: false,
@@ -32,16 +33,15 @@ export default function ListQuizz() {
     callList();
   }, [])
   function callList() {
-    setIsLoading({ ...defaultLoading, data: true });
     getList();
-    setIsLoading({ ...defaultLoading, data: false });
   }
   const getList = async () => {
+    setIsLoading({ ...defaultLoading, data: true });
     const id = localStorage.getItem("id");
     if (id !== null) {
       const response = await getQuizzList(id);
       if (response.data) {
-        setDetails(response.data);
+        setDetails(response.data.reverse());
         const viewData = response.data.map((curr, index) => {
           return {
             ...defaultData,
@@ -55,6 +55,7 @@ export default function ListQuizz() {
         toast.error("Failed to Fetch the Quizzes");
       }
     }
+    setIsLoading({ ...defaultLoading, data: false });
   }
 
   const handleNameChange = (e, index) => {
@@ -85,11 +86,24 @@ export default function ListQuizz() {
   const handleEditClick = async (index) => {
     setIsLoading({ ...defaultLoading, edit: { index, status: true } });
     const sendData = makeData(details[index].questions);
+    console.log(details[index]);
     const response = await removeQuizz(details[index]._id);
     if (response.id) {
-      setIsLoading({ ...defaultLoading, edit: { index, status: true } });
+      console.log(response);
+      setIsLoading({ ...defaultLoading, edit: { index, status: false } });
       navigate("/create/manual", {
-        state: sendData
+        state: {
+          que: sendData,
+          id: details[index].settings,
+          basic: {
+            name: details[index].name,
+            password: {
+              staus: false,
+              value: details[index].password
+            },
+            link: details[index].link
+          }
+        }
       })
     } else {
       toast.error("Error in Updating!")
@@ -98,7 +112,13 @@ export default function ListQuizz() {
 
   }
   const handleDeleteClick = async (index) => {
+    setIsStop(false);
     setIsLoading({ ...defaultLoading, delete: { index, status: true } });
+    setIsPopUpOpen({
+      ...defaultPopUp, delete: {
+        index: undefined, status: false
+      }
+    })
     const response = await removeQuizz(details[index]._id);
     if (response.id) {
       toast.success(response.message);
@@ -116,11 +136,11 @@ export default function ListQuizz() {
 
   return (
     <>
-      {
-        isLoading.data && <div><Loader type="big" /></div>
-      }
-      <div className="flex items-start w-full flex-col gap-3 mt-5">
+      <div className={`flex items-start w-full flex-col gap-3 mt-5 relative ${isPopUpOpen.delete.status ? "opacity-50" : ""}`}>
         <h1 className="text-2xl font-bold text-[#ffffff]">List of Quizzes</h1>
+        {
+          isLoading.data && <div className="flex w-full items-center justify-center"><Loader type="big" /></div>
+        }
         {
           !isLoading.data && details &&
           details.map((currQuizz, index) => {
@@ -138,7 +158,13 @@ export default function ListQuizz() {
                   <div className="flex items-center gap-2">
                     <span className={`flex items-center gap-1 text-orange-600  ${isTrues(index) ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`} onClick={() => handleEditClick(index)} >{(isLoading.edit.status && isLoading.edit.index === index) && <span><Loader type="very small" /></span>}
                       <span><Pencil size={20} /></span></span>
-                    <span className={`flex items-center gap-1 text-red-600  ${isTrues() ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`} onClick={() => handleDeleteClick(index)} >
+                    <span className={`flex items-center gap-1 text-red-600  ${isTrues() ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`} onClick={() => {
+                      setIsPopUpOpen({
+                        ...defaultPopUp, delete: {
+                          index: index, status: true
+                        }
+                      }); setIsStop(true)
+                    }}>
                       {(isLoading.delete.status && isLoading.delete.index === index) && <span><Loader type="very small" /></span>}
                       <span><Trash size={20} /></span>
                     </span>
@@ -160,11 +186,40 @@ export default function ListQuizz() {
                   </div>
                 </div>
               </div>
-
             )
           })
         }
       </div>
+      {isPopUpOpen.delete.status && <div className="absolute z-15 top-[20%] flex items-center justify-center w-full">
+        <div className="">
+          <div className="flex items-start flex-col gap-1 w-80 text-white p-1 border rounded-md px-2 bg-[#0B1020]">
+            <div className="flex items-center justify-between w-full border-b">
+              <span className="text-orange-600 text-lg">Danger Operation</span>
+              <span className="cursor-pointer" onClick={() => {
+                setIsPopUpOpen({
+                  ...defaultPopUp, delete: {
+                    index: undefined, status: false
+                  }
+                }); setIsStop(false)
+              }}><X size={20} /></span>
+            </div>
+            <div className="py-3">You are Deleting the Quizz <span className="text-red-600 font-extrabold"><i>"{viewDetails[isPopUpOpen.delete.index].name}"</i></span>, There is no Undo Operation, Make Sure You Verified Before Deletion.
+            </div>
+            <div className="flex items-center justify-between w-full">
+              <button className="flex items-center justify-center p-1 cursor-pointer transition border borde-gray-200 rounded-sm font-semibold bg-[#838186] text-white hover:bg-[#8d8d8e]" onClick={() => {
+                setIsPopUpOpen({
+                  ...defaultPopUp, delete: {
+                    index: undefined, status: false
+                  }
+                }); setIsStop(false)
+              }}>Cancel</button>
+              <label className="flex items-center justify-center p-1 cursor-pointer transition border borde-gray-200 rounded-sm font-semibold bg-[#ff0000] text-white hover:bg-[#ab2424]">
+                <span className="flex items-center gap-1" onClick={() => handleDeleteClick(isPopUpOpen.delete.index)}>Delete</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>}
 
     </>
   )

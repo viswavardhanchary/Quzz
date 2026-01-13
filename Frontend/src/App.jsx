@@ -1,12 +1,12 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import PageLayout from './page.layout';
 import Home from './pages/Home';
-import Login from './components/Login';
-import Register from './components/Register';
-import Loader from './components/Loader';
+import Login from './pages/Login';
+import Register from './pages/Register';
 import { Bounce, ToastContainer } from 'react-toastify';
 import CreateQuzz from './pages/CreateQuzz';
-import QuizzManual from './components/QuizzManual';
+import QuizzManual from './pages/QuizzManual';
+import Security from './pages/security';
 export default function App() {
   const router = createBrowserRouter([
     {
@@ -24,6 +24,10 @@ export default function App() {
         {
           path: '/create/manual',
           element: <QuizzManual />
+        },
+        {
+          path: '/create/security',
+          element: <Security />
         }
       ]
     },
