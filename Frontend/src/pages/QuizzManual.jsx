@@ -4,20 +4,14 @@ import { toast } from 'react-toastify'
 import Loader from "../components/Loader";
 import { validateUser } from "../api/reCalls";
 import LoginPopUp from "../components/LoginPopUp";
-import { addQuizz } from "../api/quizzApi";
-import {useNavigate} from 'react-router-dom';
+import { addQuizz, getQuizz } from "../api/quizzApi";
+import { useNavigate } from 'react-router-dom';
 import { useLocation } from "react-router-dom";
 
-export default function QuizzManual({data}) {
+export default function QuizzManual({ data }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const urlData = location.state?.que;
-  const basic = location.state?.basic;
-  const settingId = location.state?.id;
-  const [isLoading, setIsLoading] = useState({
-    clickType: undefined,
-  });
-  const [details, setDetails] = useState(urlData ? urlData : [
+  const defaultDetails = [
     {
       question: "",
       type: "",
@@ -35,35 +29,84 @@ export default function QuizzManual({data}) {
       },
       onCloseError: undefined,
     }
-  ]);
+  ]
+  const defaultLoading = {
+    clickType: undefined,
+    data: false
+  }
+  const [isLoading, setIsLoading] = useState(defaultLoading);
+  const urlData = JSON.parse(localStorage.getItem('urlDataManual'));
+  const [details, setDetails] = useState(urlData ? urlData : defaultDetails);
 
   const [loginPopUp, setLoginPopUp] = useState(false);
   useEffect(() => {
-    async function check() {
-      const ans = await validateUser();
-      if (ans === false) {
-        toast.error("Plz Login To Use!")
-        setLoginPopUp(true);
-      } else {
-        setLoginPopUp(false);
-      }
-    }
     check();
+    findPath();
   }, []);
+  async function check() {
+    setIsLoading({ ...defaultLoading, data: true });
+    const ans = await validateUser();
+    if (ans === false) {
+      toast.error("Plz Login To Use!")
+      setLoginPopUp(true);
+    } else {
+      setLoginPopUp(false);
+    }
+    setIsLoading({ ...defaultLoading, data: false });
+  }
+  const findPath = async () => {
+    setIsLoading({ ...defaultLoading, data: true });
+    const path = location.pathname.split("/");
+    if (path.includes("edit")) {
+      const id = path[path.length - 1];
+      const response = await getQuizz(id);
+      if (response.data) {
+        console.log(response.data);
+        const data = response.data.questions.map((question) => {
+          return {
+            question: question.question,
+            type: question.type,
+            minQuestion: false,
+            minOption: false,
+            options: question.options,
+            err: {
+              status: undefined,
+              message: ""
+            },
+            onCloseError: undefined,
+          }
+        });
+        console.log(data);
+        localStorage.setItem('urlDataManual', JSON.stringify(data));
+        localStorage.setItem('edit', JSON.stringify(true));
+        localStorage.setItem('settingId', JSON.stringify(response.data?.settings));
+        setIsLoading({ ...defaultLoading, data: false });
+        setDetails(data);
+      } else {
+        toast.error(response.message);
+      }
+    } else {
+      setIsLoading({ ...defaultLoading, data: false });
+    }
+
+  }
 
   const handleQuestionChange = (id, e) => {
     const data = [...details];
     data[id].question = e.target.value;
+    localStorage.setItem('urlDataManual', JSON.stringify(data));
     setDetails(data);
   }
   const handleTypeChange = (id, type) => {
     const data = [...details];
     data[id].type = type;
+    localStorage.setItem('urlDataManual', JSON.stringify(data));
     setDetails(data);
   }
   const handleOptionChange = (idx1, idx2, e) => {
     const data = [...details];
     data[idx1].options[idx2].value = e.target.value;
+    localStorage.setItem('urlDataManual', JSON.stringify(data));
     setDetails(data);
   }
   const handleAddOptions = (idx1, idx2) => {
@@ -75,17 +118,19 @@ export default function QuizzManual({data}) {
       value: "",
       answer: false,
     };
+    localStorage.setItem('urlDataManual', JSON.stringify(data));
     setDetails(data);
   }
   const handleDeleteOptions = (idx1, idx2) => {
     const data = [...details];
     data[idx1].options.splice(idx2, 1);
-    console.log(data);
+    localStorage.setItem('urlDataManual', JSON.stringify(data));
     setDetails(data);
   }
   const handleCurrentTypeChange = (index) => {
     const data = [...details];
     data[index].type = "";
+    localStorage.setItem('urlDataManual', JSON.stringify(data));
     setDetails(data);
   }
   const handleAddQuestion = (index) => {
@@ -107,7 +152,9 @@ export default function QuizzManual({data}) {
       onCloseError: undefined,
     }
     handleQuestionView(index, true);
-    setDetails((prev) => ([...prev.slice(0, index + 1), newQuestion, ...prev.slice(index + 1, prev.length)]));
+    const data = [...details.slice(0, index + 1), newQuestion, ...details.slice(index + 1, details.length)]
+    setDetails((prev) => (data));
+    localStorage.setItem('urlDataManual', JSON.stringify(data));
 
 
   }
@@ -170,23 +217,26 @@ export default function QuizzManual({data}) {
     } else {
       data[idx1].options[idx2].answer = !data[idx1].options[idx2].answer;
     }
+    localStorage.setItem('urlDataManual', JSON.stringify(data));
     setDetails(data);
   }
   const handleQuestionView = (index, value) => {
     const data = [...details];
     data[index].minQuestion = value;
+    localStorage.setItem('urlDataManual', JSON.stringify(data));
     setDetails(data);
   }
   const handleOptionsView = (index) => {
     const data = [...details];
     data[index].minOption = !data[index].minOption;
+    localStorage.setItem('urlDataManual', JSON.stringify(data));
     setDetails(data);
   }
 
   const handleDeleteQuestion = (index) => {
     const data = [...details];
     data.splice(index, 1);
-    console.log(data);
+    localStorage.setItem('urlDataManual', JSON.stringify(data));
     setDetails(data);
   }
 
@@ -201,6 +251,7 @@ export default function QuizzManual({data}) {
       }
       return vdata.status;
     });
+    localStorage.setItem('urlDataManual', JSON.stringify(data));
     setDetails(data);
     return verificationData;
   }
@@ -215,15 +266,16 @@ export default function QuizzManual({data}) {
     } else {
       data[index].onCloseError = false;
     }
+    localStorage.setItem('urlDataManual', JSON.stringify(data));
     setDetails(data);
   }
 
   const saveData = async () => {
-    setIsLoading({clickType: "save"});
+    setIsLoading({ ...defaultLoading, clickType: "save" });
     const arr = verifiyData();
     if (arr.includes(true)) {
       toast.info("Fill All the Errors Mentioned");
-      setIsLoading({clickType: undefined});
+      setIsLoading({ ...defaultLoading, clickType: undefined });
     } else {
       const sendingData = details.map((question) => {
         return {
@@ -232,26 +284,28 @@ export default function QuizzManual({data}) {
           options: question.options,
         }
       });
-      const sendingObj = {user: localStorage.getItem("id") , questions : [...sendingData]}
+      const sendingObj = { user: localStorage.getItem("id"), questions: [...sendingData] }
       const response = await addQuizz(sendingObj);
-      if(response.id !== null) {
+      if (response.id !== null) {
+        localStorage.removeItem('urlDataManual');
+        localStorage.removeItem('edit');
         toast.success(response.message);
-        setIsLoading({clickType: undefined});
+        setIsLoading({ ...defaultLoading, clickType: undefined });
         navigate("/create");
-      }else {
+      } else {
         toast.error(response.message);
-        setIsLoading({clickType: undefined});
+        setIsLoading({ ...defaultLoading, clickType: undefined });
       }
     }
   }
 
   const saveAndNext = () => {
-    setIsLoading({clickType: "saveandnext"});
+    setIsLoading({ ...defaultLoading, clickType: "saveandnext" });
     const arr = verifiyData();
     if (arr.includes(true)) {
       toast.info("Fill All the Errors Mentioned");
-      setIsLoading({clickType: undefined});
-    }else {
+      setIsLoading({ ...defaultLoading, clickType: undefined });
+    } else {
       const sendingData = details.map((question) => {
         return {
           question: question.question,
@@ -259,22 +313,35 @@ export default function QuizzManual({data}) {
           options: question.options,
         }
       });
-      const sendingObj = {user: localStorage.getItem("id") , questions : [...sendingData]}
-      setIsLoading({clickType: undefined});
-      navigate("/create/security" , {
-        state: {
-          que: sendingObj,
-          settingId,
-          basic
-        }
-      });
+      const sendingObj = { user: localStorage.getItem("id"), questions: [...sendingData] }
+      localStorage.setItem('urlDataManual', JSON.stringify(sendingObj));
+      localStorage.removeItem('security');
+      console.log(localStorage.getItem('settingId'))
+      const settingId = localStorage.getItem('settingId') !== 'undefined' ? JSON.parse(localStorage.getItem('settingId')) : null;
+      const path = location.pathname.split("/");
+      let quizzId = null;
+      if (path.includes("edit")) {
+        quizzId = path[path.length - 1];
+      }
+      console.log(settingId, quizzId);
+      setIsLoading({ ...defaultLoading, clickType: undefined });
+      if (settingId && quizzId) {
+        localStorage.removeItem('settingId')
+        navigate(`/create/security/edit/${quizzId}/${settingId}`);
+      } else if (quizzId) {
+        navigate(`/create/security/add/${quizzId}`);
+      } else {
+        navigate(`/create/security`);
+      }
     }
+    setIsLoading({ ...defaultLoading, clickType: undefined });
   }
 
-  
+
 
   return (
     <>
+
       {!loginPopUp &&
         <div>
           <div className="flex flex-col items-center justify-center w-full h-full">
@@ -299,7 +366,11 @@ export default function QuizzManual({data}) {
                 <div className={`hidden w-max sm:flex items-center gap-1 px-2 p-1 border borde-gray-200 rounded-sm font-semibold bg-[#3a3ded] text-white hover:bg-[#2848d9] ${isLoading.clickType !== undefined ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`} disabled={isLoading.clickType !== undefined} onClick={saveAndNext}>
                   {isLoading.clickType !== 'saveandnext' && <><span>Save & Next Step</span>
                     <span><MoveRight /></span></>}
-                  {isLoading.clickType === 'saveandnext' && <><span>Processing...</span>
+                  {isLoading.clickType === 'saveandnext' && <>
+                    <span>
+                      <Loader type="small" />
+                    </span>
+                    <span>Processing....</span>
                     <span><MoveRight /></span></>}
                 </div>
                 <div className={`flex w-max sm:hidden items-center gap-1 px-2 p-1 border borde-gray-200 rounded-sm font-semibold bg-[#3a3ded] text-white hover:bg-[#2848d9] ${isLoading.clickType !== undefined ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`} disabled={isLoading.clickType !== undefined} title="save and next" onClick={saveAndNext}>
@@ -307,7 +378,13 @@ export default function QuizzManual({data}) {
                 </div>
               </div>
             </div>
-            <div className="flex flex-col items-start p-2 gap-8 w-full mt-15">
+            {/* {console.log(isLoading.data)} */}
+            {
+
+              isLoading.data && <div className="flex w-full items-center justify-center text-white text-red-500 pt-20"><Loader type="big" /></div>
+            }
+
+            {!isLoading.data && <div className="flex flex-col items-start p-2 gap-8 w-full mt-15">
               {
                 details.map((question, index) => {
                   return (
@@ -384,7 +461,7 @@ export default function QuizzManual({data}) {
                             </div>}
 
                           {!question.minOption && (question.type === "option" || question.type === "checkbox") && question.options.map((option, index2) => {
-                             
+
                             return (String(option.value).toLowerCase() !== "n/a") ? <div className="flex items-center gap-2 w-full pl-5" key={index2}>
                               <div className="w-full flex gap-4 items-center">
                                 <div className={`flex item-center justify-center cursor-pointer text-black border border-white w-5 h-5 ${question.type === 'option' ? "rounded-full" : "rounded-xs"} ${option.answer === true && "bg-green-500"}`} onClick={() => { handleAnswerChange(index, index2) }}>
@@ -415,12 +492,12 @@ export default function QuizzManual({data}) {
                     </div>)
                 })
               }
-            </div>
+            </div>}
           </div>
         </div>
       }
       {
-        loginPopUp && <LoginPopUp/>
+        loginPopUp && !isLoading.data && <LoginPopUp />
       }
     </>
   )

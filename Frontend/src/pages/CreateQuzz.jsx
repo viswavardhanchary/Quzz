@@ -54,9 +54,8 @@ export default function CreateQuzz() {
     if (result.data) {
       toast.success(result.message);
       const sendData = makeData(result.data);
-      navigate("/create/manual", {
-        state: sendData
-      });
+      localStorage.setItem('urlDataManual' , JSON.stringify(sendData));
+      navigate("/create/manual");
     } else {
       toast.error(`File is Corrupted | Formatting Isuess File: ${e.target.files[0].name}Only .xls or .xlsx Allowed ` , {
         autoClose: 4000
@@ -66,6 +65,14 @@ export default function CreateQuzz() {
       file: undefined
     }));
     setIsLoading({ ...defaultLoading, file: false });
+  }
+
+  const handleMoveManual = () => {
+    const edit = JSON.parse(localStorage.getItem('edit'));
+    if(edit) {
+      localStorage.removeItem('urlDataManual');
+      localStorage.removeItem('edit');
+    }
   }
 
   return (
@@ -81,7 +88,7 @@ export default function CreateQuzz() {
               </div>
 
               <div className="flex flex-row items-center w-full justify-between">
-                <Link to="/create/manual" className="w-max p-1 border borde-gray-200 rounded-sm font-semibold bg-[#7C3AED] text-white hover:bg-[#6D28D9] cursor-pointer grow-none">Create Manually</Link>
+                <Link to="/create/manual" onClick={handleMoveManual}className="w-max p-1 border borde-gray-200 rounded-sm font-semibold bg-[#7C3AED] text-white hover:bg-[#6D28D9] cursor-pointer grow-none">Create Manually</Link>
 
                 <div className="flex items-center gap-2 p-1">
                   <a href="./Files/quiz_template.xlsx" className="flex items-center justify-center p-1 cursor-pointer transition border borde-gray-200 rounded-sm font-semibold bg-[#7C3AED] text-white hover:bg-[#6D28D9]" download="quiz_template.xlsx">
@@ -106,16 +113,16 @@ export default function CreateQuzz() {
             </div>
             <ListQuizz defaultPopUp={defaultPopUp} isPopUpOpen={isPopUpOpen} setIsPopUpOpen={setIsPopUpOpen}/>
           </div>
-          {isPopUpOpen.upload && <div className="absolute z-10 top-[20%] flex items-center justify-center w-full">
+          {isPopUpOpen.upload && <div className="absolute z-10 top-50 flex items-center justify-center w-full">
             <div className="">
-              <div className="flex items-start flex-col gap-1 w-90 text-white p-1 border rounded-md px-2 bg-[#0B1020]">
+              <div className="flex items-start flex-col gap-1 max-w-90 text-white p-1 border rounded-md px-2 bg-[#0B1020]">
                 <div className="flex items-center justify-between w-full border-b">
                   <span className="text-orange-600 text-lg">Suggestion</span>
                   <span className="cursor-pointer" onClick={()=>{setIsPopUpOpen({...defaultPopUp , upload: false});setIsStop(false)}}><X size={20} /></span>
                 </div>
                 <div className="py-3">We Recommend to Use our Excel Template, to Avoid Formatting Issues, And Then Modify it. <a href="./Files/quiz_template.xlsx" className=" cursor-pointer transition bfont-semibold text-[#5063f0] hover:text-[#2840d9] underline" download="quiz_template.xlsx">
                   Download Template
-                </a>
+                </a> Only (.xlsx and .xls) Files are supported
                 </div>
                 <div className="flex items-center justify-between w-full">
                   <button className="flex items-center justify-center p-1 cursor-pointer transition border borde-gray-200 rounded-sm font-semibold bg-[#838186] text-white hover:bg-[#8d8d8e]" onClick={()=>{setIsPopUpOpen({...defaultPopUp , upload: false});setIsStop(false)}}>Cancel</button>

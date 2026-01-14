@@ -64,7 +64,7 @@ const updateSetting = async (req, res) => {
     });
   }
   try {
-    const response = await Settings.findOneAndUpdate({_id: id} , data);
+    const response = await Settings.findOneAndUpdate({_id: id} , {security : data.security , access : data.access , evalution: data.evalution});
     if (!response) {
       return res.status(400).send({
         message: "Failed to Updated Details",

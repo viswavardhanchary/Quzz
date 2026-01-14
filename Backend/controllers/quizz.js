@@ -1,7 +1,9 @@
 const [Quizzs] = require('../models/quizz');
+const [Settings] = require('../models/setting');
 
 const getQuizz = async (req , res) => {
   const {id} = req.params;
+  console.log(id);
   if(id === null || id === undefined) {
     return res.status(400).send({
       message: "Error In Getting Quizz",
@@ -9,20 +11,22 @@ const getQuizz = async (req , res) => {
     });
   }
   try {
-    const result = await Quizzs.findOne({_id : id}).populate("user");
+    const result = await Quizzs.findOne({_id : id});
+    console.log(result);
     if(result) {
       return res.status(200).send({
         message: "Fetched the Quizz",
         data: result
       });
     }else {
-      return res.status(500).send({
-      message: "Error In Getting Quizz",
+      return res.status(400).send({
+      message: "No Data Found",
       data: null
     });
     }
     
   }catch(err) {
+    console.log(err);
     return res.status(500).send({
       message: "Error In Getting Quizz",
       data: null
@@ -104,7 +108,7 @@ const updateQuizz = async (req,res) => {
     });
   }
   try {
-    const result = await Quizzs.updateOne({_id: id} , {...data});
+    const result = await Quizzs.updateOne({_id: id} , {user: data.user , questions: data.questions , name: data.name , password: data.password , settings: data.setting , link: data.link});
     console.log(result);
     if(result.modifiedCount !== 0) {
       return res.status(200).send({
@@ -172,6 +176,7 @@ const deleteQuizz = async (req,res) => {
   }
   try {
     const result = await Quizzs.findOneAndDelete({_id: id});
+    await Settings.findOneAndDelete({_id: result.settings});
     console.log(result);
     if(result) {
       return res.status(200).send({

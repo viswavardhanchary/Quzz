@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 export default function ActionLinks({ handleHamClick, id ,setId}) {
   const navigate = useNavigate();
   const logoutUser = ()=> {
-    localStorage.removeItem("id");
+    localStorage.clear();
     setId(null);
     navigate("/");
   }

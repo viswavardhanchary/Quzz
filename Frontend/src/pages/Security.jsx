@@ -1,20 +1,24 @@
 import { BadgePlus, Eye, EyeOff, Info, Save } from "lucide-react";
 import { useEffect, useState } from "react";
-import { UNSAFE_getHydrationData, useLocation } from "react-router-dom"
+import { useLocation } from "react-router-dom"
 import Loader from "../components/Loader";
 import { toast } from "react-toastify";
-import { addQuizz, updateQuizz } from "../api/quizzApi";
-import {useNavigate} from 'react-router-dom'
-import { addSettings, getSettings, removeSettings } from "../api/settingApi";
+import { addQuizz, getQuizz, updateQuizz } from "../api/quizzApi";
+import { useNavigate } from 'react-router-dom'
+import { addSettings, getSettings, removeSettings, updateSettings } from "../api/settingApi";
+import { validateUser,formatDate } from "../api/reCalls";
 export default function Security() {
   const location = useLocation();
   const navigate = useNavigate();
-  const urlData = location.state?.que;
-  const settingId = location.state?.settingId;
-  const basic = location.state?.basic;
-  const [isLoading, setIsLoading] = useState({
-    clickType: undefined
-  })
+  const urlData = localStorage.getItem('urlDataManual') !== 'undefined' ? JSON.parse(localStorage.getItem('urlDataManual')) : null;
+  const basic = localStorage.getItem('basic') !== 'undefined' ? JSON.parse(localStorage.getItem('basic')) : null;
+  const settingId = localStorage.getItem('settingId') !== 'undefined' ? JSON.parse(localStorage.getItem('settingId')) : null;
+
+  const defaultLoading = {
+    clickType: undefined,
+    data: false
+  }
+  const [isLoading, setIsLoading] = useState(defaultLoading);
   const defaulltDetails = {
     basic: {
       name: "",
@@ -46,8 +50,8 @@ export default function Security() {
         people: []
       },
       date: {
-        start: undefined,
-        end: undefined
+        start: new Date(),
+        end: new Date()
       },
       duration: {
         hrs: 0,
@@ -65,25 +69,63 @@ export default function Security() {
       leaderboard: true
     }
   }
-  const [details, setDetails] = useState(defaulltDetails);
+  const secDetails = JSON.parse(localStorage.getItem('security'))
+  const [details, setDetails] = useState(secDetails ? secDetails : defaulltDetails);
+  const [loginPopUp, setLoginPopUp] = useState(false);
 
-  useEffect(()=> {
-    console.log(location.state);
-    if(settingId) {
-      getData();
-    }
-  },[]);
+  useEffect(() => {
+    check();
+    findPath();
+  }, []);
 
-  const getData = async () => {
-    const response = await getSettings(settingId);
-    console.log(response);
-    if(response.data) {
-      setDetails({basic : {...basic} ,security : response.data.security , access: response.data.access , evalution: response.data.evalution});
-      console.log({basic : {...basic} ,security : response.data.security , access: response.data.access , evalution: response.data.evalution})
-    }else {
-      toast.error(response.message);
+
+  async function check() {
+    setIsLoading({ ...defaultLoading, data: true });
+    const ans = await validateUser();
+    if (ans === false) {
+      toast.error("Plz Login To Use!")
+      setLoginPopUp(true);
+    } else {
+      setLoginPopUp(false);
     }
+    setIsLoading({ ...defaultLoading, data: false });
   }
+
+  const findPath = async () => {
+    setIsLoading({ ...defaultLoading, data: true });
+    const path = location.pathname.split("/");
+    if (path.includes("edit")) {
+      const id = path[path.length - 1];
+      console.log(id);
+      const response = await getSettings(id);
+      console.log(response);
+
+      if (response.data) {
+        const response2 = await getQuizz(path[path.length - 2]);
+        console.log(response2);
+        if (response2.data) {
+          const basic = {
+            name: response2.data.name,
+            password: {
+              value: response2.data.password,
+              visible: false,
+            },
+            link: response2.data.link
+          }
+          const cameData = { basic, security: response.data.security, access: response.data.access, evalution: response.data.evalution }
+          console.log(cameData);
+          setDetails(cameData);
+          localStorage.setItem('security', JSON.stringify(cameData));
+        } else {
+          toast.error(response.message);
+        }
+      } else {
+        toast.error(response.message);
+      }
+    }
+    setIsLoading({ ...defaultLoading, data: false });
+  }
+
 
   const handleBasicChange = (type1, type2, value) => {
     const data = { ...details };
@@ -92,6 +134,7 @@ export default function Security() {
     } else {
       data.basic[type1][type2] = value;
     }
+    localStorage.setItem('security', JSON.stringify(data));
     setDetails(data);
   }
 
@@ -102,6 +145,7 @@ export default function Security() {
     } else {
       data.security[type1][type2] = value
     }
+    localStorage.setItem('security', JSON.stringify(data));
     setDetails(data);
   }
   const handleAccessChange = (type1, type2, value) => {
@@ -117,6 +161,7 @@ export default function Security() {
       }
       data.access[type1][type2] = value;
     }
+    localStorage.setItem('security', JSON.stringify(data));
     setDetails(data);
   }
   const handleEvalutionChange = (type1, type2, value) => {
@@ -130,60 +175,77 @@ export default function Security() {
         data.evalution.award.status = false;
       }
     }
+    localStorage.setItem('security', JSON.stringify(data));
     setDetails(data);
   }
   const handleSkipNow = async () => {
-    setIsLoading({ clickType: 'skip' });
-      const response = await addQuizz(urlData);
-      if (response.id !== null) {
-        toast.success(response.message);
-        setIsLoading({ clickType: undefined });
-        navigate("/create");
-      } else {
-        toast.error(response.message);
-        setIsLoading({ clickType: undefined });
-      }
+    setIsLoading({ ...defaultLoading, clickType: 'skip' });
+    const response = await addQuizz(urlData);
+    if (response.id !== null) {
+      localStorage.removeItem('security');
+      toast.success(response.message);
+      setIsLoading({ ...defaultLoading, clickType: undefined });
+      navigate("/create");
+    } else {
+      toast.error(response.message);
+      setIsLoading({ ...defaultLoading, clickType: undefined });
+    }
   }
 
   const createQuizz = async () => {
-    setIsLoading({ clickType: 'skip' });
+    setIsLoading({ ...defaultLoading, clickType: 'create' });
     const verification = verifyData();
     if (!verification) {
       toast.error("Plz, Fill All Fields Marked With Red Border");
-      setIsLoading({ clickType: undefined });
+      setIsLoading({ ...defaultLoading, clickType: undefined });
     } else {
-      const data = {security: {...details.security} , access: {...details.access} , evalution : {...details.evalution}};
-      const res1 = await addSettings(data);
-      if(res1.id) {
-        if(settingId) {
-          const res2 = await removeSettings(settingId);
-          if(!res2.id) {
-            toast.error("Error in Updating");
-            setIsLoading({ clickType: undefined });
-            return ;
-          }
+      const data = { security: { ...details.security }, access: { ...details.access }, evalution: { ...details.evalution } };
+      const path = location.pathname.split("/");
+      let res1 = null
+      let quizzId = null;
+      if (path.includes("edit")) {
+        const id = path[path.length - 1];
+        quizzId = path[path.length - 2];
+        res1 = await updateSettings(data, id);
+      } else {
+        if (path.includes("add")) {
+          quizzId = path[path.length - 1];
         }
-        const res2 = await addQuizz({...urlData , name: details.basic.name , password: details.basic.password.value , setting: res1.id , link: details.basic.link});
-        if(res2.id) {
+        res1 = await addSettings(data);
+      }
+      console.log(res1);
+      if (res1.id) {
+        const urlData = JSON.parse(localStorage.getItem('urlDataManual'));
+        let res2;
+        if (quizzId) {
+          res2 = await updateQuizz({ ...urlData, name: details.basic.name, password: details.basic.password.value, setting: res1.id, link: details.basic.link }, quizzId);
+        } else {
+          res2 = await addQuizz({ ...urlData, name: details.basic.name, password: details.basic.password.value, setting: res1.id, link: details.basic.link });
+        }
+        if (res2.id) {
+          localStorage.removeItem('security');
+          localStorage.removeItem('urlDataManual')
+          localStorage.removeItem('edit')
+          localStorage.removeItem('settingId')
           toast.success(res2.message);
-          setIsLoading({ clickType: undefined });
+          setIsLoading({ ...defaultLoading, clickType: undefined });
           navigate("/create");
-        }else {
+        } else {
           toast.error(res2.message);
         }
-      }else {
+      } else {
         toast.error(res1.message);
       }
     }
-    setIsLoading({ clickType: undefined });
+    setIsLoading({ ...defaultLoading, clickType: undefined });
   }
 
   const verifyData = () => {
     if (
       details.basic.name.trim() === "" || details.basic.password.value.trim() === "" ||
-      details.security.instructions.status && details.security.instructions.data.trim() === "" || details.access.date.start === undefined || details.access.date.end === undefined
-      || (details.access.duration.hrs === 0 && details.access.duration.minutes === 0) ||
-      (details.evalution.award.status && details.evalution.award.correct === 0)
+      details.security.instructions.status && details.security.instructions.data.trim() === "" || new Date(details.access.date.start) - new Date(details.access.date.end) > 0
+      || (details.access.duration.hrs <= 0 && details.access.duration.minutes <= 0) ||
+      (details.evalution.award.status && details.evalution.award.correct === 0) || details.access.duration.minutes < 0 || details.access.duration.minutes > 60 || details.access.duration.hrs < 0 || details.access.duration.hrs > 10 || (details.evalution.award.status && (details.evalution.award.correct <= details.evalution.award.wrong || details.evalution.award.wrong)) < 0
     ) {
       return false;
     } else {
@@ -218,15 +280,23 @@ export default function Security() {
               <div className={`hidden w-max sm:flex items-center gap-1 px-2 p-1 border borde-gray-200 rounded-sm font-semibold bg-[#3a3ded] text-white hover:bg-[#2848d9] ${isLoading.clickType !== undefined ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`} onClick={createQuizz} disabled={isLoading.clickType !== undefined} >
                 {isLoading.clickType !== 'create' && <span>Create</span>
                 }
-                {isLoading.clickType === 'create' && <span>Processing...</span>
-                }
+                {isLoading.clickType === 'create' && <>
+                  <span>
+                    <Loader type="small" />
+                  </span>
+                  <span>Creating....</span>
+                  </>}
               </div>
               <div className={`flex w-max sm:hidden items-center gap-1 px-2 p-1 border borde-gray-200 rounded-sm font-semibold bg-[#3a3ded] text-white hover:bg-[#2848d9] ${isLoading.clickType !== undefined ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`} onClick={createQuizz} disabled={isLoading.clickType !== undefined} title="Create Quizze">
                 <BadgePlus />
               </div>
             </div>
           </div>
-          <div className="flex flex-col items-start gap-2 p-2 w-full">
+          {
+
+            isLoading.data && <div className="flex w-full items-center justify-center text-white pt-20"><Loader type="big" /></div>
+          }
+          {!isLoading.data && <div className="flex flex-col items-start gap-2 p-2 w-full">
             <div className="w-full flex flex-col items-center">
               <h1 className="text-2xl text-[#ff9100] text-center">Basic Details</h1>
               <div className="flex items-center justify-center w-full">
@@ -263,8 +333,8 @@ export default function Security() {
                 <span>Link should be Enable to Share/Take the Quizze</span>
               </div>
             </div>
-          </div>
-          <div className="flex flex-col items-start gap-2 p-2 w-full">
+          </div>}
+          {!isLoading.data && <div className="flex flex-col items-start gap-2 p-2 w-full">
             <div className="w-full flex flex-col items-center">
               <h1 className="text-2xl text-[#ff9100] text-center">Security Details</h1>
               <div className="flex items-center justify-center  w-full">
@@ -288,7 +358,7 @@ export default function Security() {
                 {details.security.tabSwitching.status &&
                   <div className="flex flex-col items-start gap-1 pl-8">
                     <label>Enter no of tab Switchings,Allowed Before Canceling Quizze</label>
-                    <input type="number" value={details.security.tabSwitching.count} onChange={(e) => handleSecurityChange("tabSwitching", 'count', e.target.value)} className="border rounded-sm bg-white/90 w-20 p-1 text-black outline-none" />
+                    <input type="number" value={details.security.tabSwitching.count} onChange={(e) => handleSecurityChange("tabSwitching", 'count', e.target.value)} className="border rounded-sm bg-white/90 w-20 p-1 text-black outline-none" min="0"/>
                   </div>
                 }
               </div>
@@ -330,8 +400,8 @@ export default function Security() {
                 }
               </div>
             </div>
-          </div>
-          <div className="flex flex-col items-start gap-2 p-2 w-full">
+          </div>}
+          {!isLoading.data && <div className="flex flex-col items-start gap-2 p-2 w-full">
             <div className="w-full flex flex-col items-center">
               <h1 className="text-2xl text-[#ff9100] text-center">Access Details</h1>
               <div className="flex items-center justify-center  w-full">
@@ -357,34 +427,39 @@ export default function Security() {
                 </div>}
               </div>
             </div>
+            {/* {console.log(new Date(details.access.date.start))}
+            {console.log(new Date(details.access.date.to))}
+            {console.log(new Date(details.access.date.start) - new Date(details.access.date.to))} */}
             <div className="flex items-start flex-col gap-2 w-full">
               <p className="text-lg text-orange-500">Enter the Date to Access the Quizze</p>
-              <div className="flex items-center w-full gap-5">
+              <div className="flex items-center w-full gap-5 flex-wrap">
                 <div className="flex items-center gap-3">
                   <p>From: </p>
-                  <input type="date" className={`border-2 ${details.access.date.start === undefined ? "border-red-500" : "border-green-500"} outline-none p-1 rounded-sm bg-white/90 w-full text-black`} value={details.access.date.from} onChange={(e) => handleAccessChange("date", 'start', e.target.value)} />
+                  <input type="date" className={`border-2 ${details.access.date.start === undefined || new Date(details.access.date.start) - new Date(details.access.date.end) > 0 ? "border-red-500" : "border-green-500"} outline-none p-1 rounded-sm bg-white/90 w-full text-black`} value={details.access.date.start !== undefined ? formatDate(details.access.date.start) : ""} onChange={(e) => handleAccessChange("date", 'start', e.target.value)} min={formatDate(new Date())}
+                  
+                  />
                 </div>
                 <div className="flex items-center gap-3">
                   <p>To: </p>
-                  <input type="date" className={`border-2 ${details.access.date.end=== undefined ? "border-red-500" : "border-green-500"} outline-none p-1 rounded-sm bg-white/90 w-full text-black`} value={details.access.date.to} onChange={(e) => handleAccessChange("date", 'end', e.target.value)} />
+                  <input type="date" className={`border-2 ${details.access.date.end === undefined || new Date(details.access.date.start) - new Date(details.access.date.end) > 0 ? "border-red-500" : "border-green-500"} outline-none p-1 rounded-sm bg-white/90 w-full text-black`} value={details.access.date.end !== undefined ? formatDate(details.access.date.end) : ""}onChange={(e) => handleAccessChange("date", 'end', e.target.value)} min={formatDate(details.access.date.start === undefined ? new Date() : details.access.date.start)}/>
                 </div>
               </div>
             </div>
-            <div className="flex items-start flex-col gap-2 w-full">
+            <div className="flex items-start flex-col gap-2 w-full flex-wrap">
               <p className="text-lg text-orange-500">Enter the Duration of the Quizze</p>
               <div className="flex items-center w-full gap-5">
                 <div className="flex items-center gap-3">
                   <p>Hrs: </p>
-                  <input type="number" className={`border-2 ${details.access.duration.hrs <= 0 && details.access.duration.minutes <= 0 ? "border-red-500" : "border-green-500"} outline-none p-1 rounded-sm bg-white/90 w-full text-black`} value={details.access.duration.hrs} onChange={(e) => handleAccessChange("duration", 'hrs', e.target.value)} />
+                  <input type="number" className={`border-2 ${(details.access.duration.hrs <= 0 && details.access.duration.minutes <= 0)|| details.access.duration.hrs < 0 || details.access.duration.hrs > 10 ? "border-red-500" : "border-green-500"} outline-none p-1 rounded-sm bg-white/90 w-full text-black`} value={details.access.duration.hrs} onChange={(e) => handleAccessChange("duration", 'hrs', e.target.value)} min="0" max="10"/>
                 </div>
                 <div className="flex items-center gap-3">
                   <p>Minutes: </p>
-                  <input type="number" className={`border-2 ${details.access.duration.hrs === 0 && details.access.duration.minutes === 0 ? "border-red-500" : "border-green-500"} outline-none p-1 rounded-sm bg-white/90 w-full text-black`} value={details.access.duration.minutes} onChange={(e) => handleAccessChange("duration", 'minutes', e.target.value)} />
+                  <input type="number" className={`border-2 ${(details.access.duration.hrs <= 0 && details.access.duration.minutes <= 0)|| details.access.duration.minutes < 0 || details.access.duration.minutes > 60 ? "border-red-500" : "border-green-500"} outline-none p-1 rounded-sm bg-white/90 w-full text-black`} value={details.access.duration.minutes} onChange={(e) => handleAccessChange("duration", 'minutes', e.target.value)} min="0" max="59"/>
                 </div>
               </div>
             </div>
-          </div>
-          <div className="flex flex-col items-start gap-2 p-2 w-full">
+          </div>}
+          {!isLoading.data && <div className="flex flex-col items-start gap-2 p-2 w-full">
             <div className="w-full flex flex-col items-center">
               <h1 className="text-2xl text-[#ff9100] text-center">Evalution Details</h1>
               <div className="flex items-center justify-center  w-full">
@@ -410,12 +485,13 @@ export default function Security() {
                     <span>Correct Answer Marks: </span>
                     <input type="number" className={`border-2 ${details.evalution.award.correct <= 0 ? "border-red-500" : "border-green-500"} outline-none p-1 rounded-sm bg-white/90 w-full text-black`}
                       value={details.evalution.award.correct} onChange={(e) => handleEvalutionChange("award", 'correct', e.target.value)}
+                      min="0"
                     />
                   </div>
                   <div className="flex items-center gap-2 w-full">
                     <span>Wrong Answer Marks: </span>
-                    <input type="number" className={`border-2 ${details.evalution.award.wrong < 0 ? "border-red-500" : "border-green-500"} outline-none p-1 rounded-sm bg-white/90 w-full text-black`}
-                      value={details.evalution.award.wrong} onChange={(e) => handleEvalutionChange("award", 'wrong', e.target.value)}
+                    <input type="number" className={`border-2 ${details.evalution.award.wrong < 0 || details.evalution.award.correct <= details.evalution.award.wrong? "border-red-500" : "border-green-500"} outline-none p-1 rounded-sm bg-white/90 w-full text-black`}
+                      value={details.evalution.award.wrong} onChange={(e) => handleEvalutionChange("award", 'wrong', e.target.value)} min="0"
                     />
                   </div>
                 </div>}
@@ -438,7 +514,7 @@ export default function Security() {
                 </div>
               </div>
             </div>
-          </div>
+          </div>}
         </div>
       </div>
     </>

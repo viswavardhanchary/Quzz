@@ -6,7 +6,7 @@ import Register from './pages/Register';
 import { Bounce, ToastContainer } from 'react-toastify';
 import CreateQuzz from './pages/CreateQuzz';
 import QuizzManual from './pages/QuizzManual';
-import Security from './pages/security';
+import Security from './pages/Security';
 export default function App() {
   const router = createBrowserRouter([
     {
@@ -26,7 +26,19 @@ export default function App() {
           element: <QuizzManual />
         },
         {
+          path: '/create/edit/:id',
+          element: <QuizzManual />
+        },
+        {
           path: '/create/security',
+          element: <Security />
+        },
+        {
+          path: '/create/security/add/:id',
+          element: <Security />
+        },
+        {
+          path: '/create/security/edit/:id1/:id2',
           element: <Security />
         }
       ]

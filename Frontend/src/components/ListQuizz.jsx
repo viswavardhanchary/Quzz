@@ -2,12 +2,13 @@ import { useEffect, useState } from "react"
 import { getQuizzList, removeQuizz, updateOneQuizz } from "../api/quizzApi"
 import Loader from "./Loader";
 import { toast } from 'react-toastify'
-import { ChevronDown, ChevronUp, Forward, Pencil, Trash, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Eye, EyeOff, Forward, Pencil, Trash, X } from 'lucide-react';
 import PreviewQuzz from "./PreviewQuzz";
-import { makeData } from "../api/reCalls";
 import { useNavigate, useOutletContext } from 'react-router-dom';
+import { getSettings } from "../api/settingApi";
+import PreviewSettings from "./PreviewSettings";
 export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen }) {
-  const { isStop, setIsStop } = useOutletContext()
+  const { setIsStop } = useOutletContext()
   const navigate = useNavigate();
   const defaultLoading = {
     data: false,
@@ -25,17 +26,21 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
   const defaultData = {
     id: undefined,
     view: false,
+    password: "",
+    link: {
+      status: false,
+      address: ""
+    },
     name: "",
+    setting: undefined,
+    eye: false
   }
   const [viewDetails, setViewDetails] = useState([]);
 
   useEffect(() => {
-    callList();
+    getQuestionsList();
   }, [])
-  function callList() {
-    getList();
-  }
-  const getList = async () => {
+  const getQuestionsList = async () => {
     setIsLoading({ ...defaultLoading, data: true });
     const id = localStorage.getItem("id");
     if (id !== null) {
@@ -47,16 +52,36 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
             ...defaultData,
             id: curr._id,
             name: curr.name !== "" ? curr.name : `Quizz${index + 1}`,
-            lastName: `Quizz${index + 1}`
+            lastName: curr.name !== "" ? curr.name : `Quizz${index + 1}`,
+            password: curr.password !== "" ? curr.password : "",
+            link: curr.link
           }
         });
-        setViewDetails(viewData);
+        const updatedViewDetails = []
+        for(let i=0;i<viewData.length;i++) {
+          const obj = {
+            ...viewData[i]
+          }
+          if(response.data[i].settings) {
+             const response2 = await getSettings(response.data[i].settings);
+            if(response2.data) {
+              obj.setting = {...response2.data};
+            }else {
+              toast.error(response2.message);
+              setIsLoading({ ...defaultLoading, data: false });
+              return ;
+            }
+          }
+          updatedViewDetails.push(obj);
+        }
+        setViewDetails(updatedViewDetails);
       } else {
         toast.error("Failed to Fetch the Quizzes");
       }
     }
     setIsLoading({ ...defaultLoading, data: false });
   }
+
 
   const handleNameChange = (e, index) => {
     const data = [...viewDetails];
@@ -71,8 +96,12 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
     } else {
       const response = await updateOneQuizz(details[index]._id, "name", data[index].name.trim());
       console.log(response);
+      
       if (response.id === null) {
         toast.error(response.message);
+      }else {
+        data[index].lastName = data[index].name;
+        setViewDetails(data);
       }
     }
   }
@@ -80,36 +109,14 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
     const data = [...viewDetails];
     for (let i = 0; i < viewDetails.length; i++) data[i].view = false;
     data[index].view = value;
+    data[index].eye = false;
     setViewDetails(data);
   }
 
   const handleEditClick = async (index) => {
-    setIsLoading({ ...defaultLoading, edit: { index, status: true } });
-    const sendData = makeData(details[index].questions);
-    console.log(details[index]);
-    const response = await removeQuizz(details[index]._id);
-    if (response.id) {
-      console.log(response);
-      setIsLoading({ ...defaultLoading, edit: { index, status: false } });
-      navigate("/create/manual", {
-        state: {
-          que: sendData,
-          id: details[index].settings,
-          basic: {
-            name: details[index].name,
-            password: {
-              staus: false,
-              value: details[index].password
-            },
-            link: details[index].link
-          }
-        }
-      })
-    } else {
-      toast.error("Error in Updating!")
-    }
-    setIsLoading({ ...defaultLoading, edit: { index, status: true } });
-
+    localStorage.removeItem('urlDataManual');
+    localStorage.removeItem('edit');
+    navigate(`/create/edit/${details[index]._id}`)
   }
   const handleDeleteClick = async (index) => {
     setIsStop(false);
@@ -126,8 +133,16 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
       toast.error(response.message);
     }
     setIsLoading({ ...defaultLoading, delete: { index, status: false } });
-    callList();
+    getQuestionsList();
 
+  }
+
+  const handleEyeClick = (index , value) => {
+    const data = [...viewDetails];
+    for (let i = 0; i < viewDetails.length; i++) data[i].eye = false;
+    data[index].view = false;
+    data[index].eye = value;
+    setViewDetails(data);
   }
 
   const isTrues = (index) => {
@@ -149,7 +164,7 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
                 <div className="w-max p-1 border border-gray-200 border-b-0 rounded-sm font-semibold rounded-b-none bg-[#7C3AED] text-white hover:bg-[#6D28D9] cursor-pointer">
                   <span>Created on: {currQuizz.created_on.day}</span>
                 </div>
-                <div className="w-full flex items-center justify-between p-2 border rounded-md rounded-b-none">
+                <div className="w-full flex items-center justify-between p-2 border rounded-md rounded-b-none rounded-tr-none">
                   <div className="flex items-center gap-1">
                     <p className="text-xl">{index + 1}.</p>
                     <input type="text" value={viewDetails[index].name} onChange={(e) => handleNameChange(e, index)} className="text-md sm:text-xl text-[#ff9100] outline-none border-b border-white" onBlur={() => handleUpdateName(index)} />
@@ -168,15 +183,23 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
                       {(isLoading.delete.status && isLoading.delete.index === index) && <span><Loader type="very small" /></span>}
                       <span><Trash size={20} /></span>
                     </span>
+                    <div className="cursor-pointer" onClick={(e) => handleEyeClick(index ,!viewDetails[index].eye)}>
+                      {!viewDetails[index].eye && <span><Eye size={20}/></span>}
+                      {viewDetails[index].eye && <span><EyeOff size={20}/></span>}
+                    </div>
                     <div>
                       {viewDetails[index].view === false && <div className="cursor-pointer" onClick={() => handleViewChange(index, !viewDetails[index].view)}><ChevronDown size={24} /></div>}
                       {viewDetails[index].view === true && <div className="cursor-pointer" onClick={() => handleViewChange(index, !viewDetails[index].view)}><ChevronUp size={24} /></div>}
                     </div>
+                    
                   </div>
 
                 </div>
                 {viewDetails[index].view && <div className="w-full h-80 border border-t-0 overflow-y-auto">
                   <PreviewQuzz data={currQuizz} />
+                </div>}
+                {viewDetails[index].eye && <div className="w-full h-80 border border-t-0 overflow-y-auto">
+                  <PreviewSettings data={viewDetails[index]} />
                 </div>}
                 <div className="w-full justify-end flex gap-2 text-[12px] sm:text-[16px]">
                   <div className="w-max p-1 border border-gray-200 border-t-0 rounded-sm font-semibold rounded-t-none bg-[#266e0e] text-white hover:bg-[#468346] cursor-pointer">Take Quizze</div>
@@ -190,9 +213,9 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
           })
         }
       </div>
-      {isPopUpOpen.delete.status && <div className="absolute z-15 top-[20%] flex items-center justify-center w-full">
+      {isPopUpOpen.delete.status && <div className="absolute z-10 top-50 flex items-center justify-center w-full">
         <div className="">
-          <div className="flex items-start flex-col gap-1 w-80 text-white p-1 border rounded-md px-2 bg-[#0B1020]">
+          <div className="flex items-start flex-col gap-1 max-w-90 text-white p-1 border rounded-md px-2 bg-[#0B1020]">
             <div className="flex items-center justify-between w-full border-b">
               <span className="text-orange-600 text-lg">Danger Operation</span>
               <span className="cursor-pointer" onClick={() => {

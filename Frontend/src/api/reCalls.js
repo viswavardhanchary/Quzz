@@ -37,18 +37,26 @@ export async function validateUser() {
 }
 
 export function makeData(data) {
-    return data.map((cur) => {
-        return {
-          question: cur.question,
-          type: cur.type,
-          minQuestion: false,
-          minOption: false,
-          options: [...cur.options],
-          err: {
-            status: undefined,
-            message: ""
-          },
-          onCloseError: undefined,
-        }
-      })
-  }
+  return data.map((cur) => {
+    return {
+      question: cur.question,
+      type: cur.type,
+      minQuestion: false,
+      minOption: false,
+      options: [...cur.options],
+      err: {
+        status: undefined,
+        message: ""
+      },
+      onCloseError: undefined,
+    }
+  })
+}
+
+export function formatDate(date) {
+  const current = new Date(date);
+  const year = current.getFullYear();
+  const month = (current.getMonth()+1).toString().padStart(2 , '0');
+  const day = current.getDate().toString().padStart(2 , '0');
+  return `${year}-${month}-${day}`;
+}
