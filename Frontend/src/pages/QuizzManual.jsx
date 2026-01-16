@@ -4,7 +4,7 @@ import { toast } from 'react-toastify'
 import Loader from "../components/Loader";
 import { validateUser } from "../api/reCalls";
 import LoginPopUp from "../components/LoginPopUp";
-import { addQuizz, getQuizz } from "../api/quizzApi";
+import { addQuizz, getQuizz, updateQuizz } from "../api/quizzApi";
 import { useNavigate } from 'react-router-dom';
 import { useLocation } from "react-router-dom";
 
@@ -285,16 +285,32 @@ export default function QuizzManual({ data }) {
         }
       });
       const sendingObj = { user: localStorage.getItem("id"), questions: [...sendingData] }
-      const response = await addQuizz(sendingObj);
-      if (response.id !== null) {
-        localStorage.removeItem('urlDataManual');
-        localStorage.removeItem('edit');
-        toast.success(response.message);
-        setIsLoading({ ...defaultLoading, clickType: undefined });
-        navigate("/create");
+      if (location.pathname.split("/").includes("edit")) {
+        const path = location.pathname.split("/");
+        const quizzId = path[path.length - 1];
+        const response = await updateQuizz(sendingObj , quizzId);
+        if (response.id !== null) {
+          localStorage.removeItem('urlDataManual');
+          localStorage.removeItem('edit');
+          toast.success(response.message);
+          setIsLoading({ ...defaultLoading, clickType: undefined });
+          navigate("/create");
+        } else {
+          toast.error(response.message);
+          setIsLoading({ ...defaultLoading, clickType: undefined });
+        }
       } else {
-        toast.error(response.message);
-        setIsLoading({ ...defaultLoading, clickType: undefined });
+        const response = await addQuizz(sendingObj);
+        if (response.id !== null) {
+          localStorage.removeItem('urlDataManual');
+          localStorage.removeItem('edit');
+          toast.success(response.message);
+          setIsLoading({ ...defaultLoading, clickType: undefined });
+          navigate("/create");
+        } else {
+          toast.error(response.message);
+          setIsLoading({ ...defaultLoading, clickType: undefined });
+        }
       }
     }
   }
@@ -335,6 +351,11 @@ export default function QuizzManual({ data }) {
       }
     }
     setIsLoading({ ...defaultLoading, clickType: undefined });
+  }
+
+  const clearEveryThing = () => {
+    localStorage.removeItem("urlDataManual");
+    setDetails(defaultDetails);
   }
 
 
@@ -378,13 +399,19 @@ export default function QuizzManual({ data }) {
                 </div>
               </div>
             </div>
-            {/* {console.log(isLoading.data)} */}
+            <div className="w-full flex items-start px-2 p-1">
+              <div className={`w-max px-2 p-1 border borde-gray-200 rounded-sm font-semibold bg-[#3a3ded] text-white hover:bg-[#2848d9] mt-18 cursor-pointer`} onClick={clearEveryThing}>
+                clear
+              </div>
+            </div>
+
+
             {
 
-              isLoading.data && <div className="flex w-full items-center justify-center text-white text-red-500 pt-20"><Loader type="big" /></div>
+              isLoading.data && <div className="flex w-full items-center justify-center text-white pt-20"><Loader type="big" /></div>
             }
 
-            {!isLoading.data && <div className="flex flex-col items-start p-2 gap-8 w-full mt-15">
+            {!isLoading.data && <div className="flex flex-col items-start p-2 gap-8 w-full">
               {
                 details.map((question, index) => {
                   return (

@@ -11,7 +11,7 @@ export default function Home() {
           with Excel or manual input.</h1>
           <h3 className="text-[#C7D2FE]">Enable link-based assessments, real-time result dashboards, and protected video-based quizzes with automated Excel reports.</h3>
           <div className="flex items-center gap-3 flex-wrap">
-          <button className="p-1 border borde-gray-200 rounded-sm font-semibold bg-[#7C3AED] text-white hover:bg-[#6D28D9] text-lg cursor-pointer grow">Take Quizze</button>
+          <Link to="/create" className="p-1 border borde-gray-200 rounded-sm font-semibold bg-[#7C3AED] text-white hover:bg-[#6D28D9] text-lg cursor-pointer grow">Take Quizze</Link>
           <Link to="/create" className=" p-1 border borde-gray-200 rounded-sm font-semibold bg-[#7C3AED] text-white hover:bg-[#6D28D9] text-lg cursor-pointer grow">Create Quizze</Link>
         </div>
         </div>
@@ -21,8 +21,11 @@ export default function Home() {
         </div>
       </div>
       {/* List of Quizz */}
-      <div className="px-2 py-2">
+      <div className="flex items-start gap-3 flex-col px-2 py-2">
         <h1 className="text-2xl font-bold text-[#ffffff]">List of Quizzes Taken</h1>
+        <div className=''>
+          
+        </div>
       </div>
     </div>
       

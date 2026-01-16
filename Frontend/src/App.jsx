@@ -7,6 +7,9 @@ import { Bounce, ToastContainer } from 'react-toastify';
 import CreateQuzz from './pages/CreateQuzz';
 import QuizzManual from './pages/QuizzManual';
 import Security from './pages/Security';
+import Test from './pages/Test';
+import TestStart from './pages/TestStart';
+import TestDashboard from './components/TestDashboard';
 export default function App() {
   const router = createBrowserRouter([
     {
@@ -40,6 +43,13 @@ export default function App() {
         {
           path: '/create/security/edit/:id1/:id2',
           element: <Security />
+        },
+        {
+          path: '/quizz/test/:id',
+          element: <Test />
+        },{
+          path: '/quizz/test/dashboard/:id',
+          element: <TestDashboard/>
         }
       ]
     },
@@ -50,6 +60,10 @@ export default function App() {
     {
       path: "/register",
       element: <Register />
+    },
+    {
+      path: '/quizz/test/start/:id',
+      element: <TestStart />
     }
   ])
   return (

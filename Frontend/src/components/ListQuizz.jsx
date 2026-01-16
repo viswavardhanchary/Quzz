@@ -2,11 +2,12 @@ import { useEffect, useState } from "react"
 import { getQuizzList, removeQuizz, updateOneQuizz } from "../api/quizzApi"
 import Loader from "./Loader";
 import { toast } from 'react-toastify'
-import { ChevronDown, ChevronUp, Eye, EyeOff, Forward, Pencil, Trash, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Copy, Eye, EyeOff, Forward, Pencil, Trash, X } from 'lucide-react';
 import PreviewQuzz from "./PreviewQuzz";
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { getSettings } from "../api/settingApi";
 import PreviewSettings from "./PreviewSettings";
+import { Link } from "react-router-dom";
 export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen }) {
   const { setIsStop } = useOutletContext()
   const navigate = useNavigate();
@@ -58,18 +59,18 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
           }
         });
         const updatedViewDetails = []
-        for(let i=0;i<viewData.length;i++) {
+        for (let i = 0; i < viewData.length; i++) {
           const obj = {
             ...viewData[i]
           }
-          if(response.data[i].settings) {
-             const response2 = await getSettings(response.data[i].settings);
-            if(response2.data) {
-              obj.setting = {...response2.data};
-            }else {
+          if (response.data[i].settings) {
+            const response2 = await getSettings(response.data[i].settings);
+            if (response2.data) {
+              obj.setting = { ...response2.data };
+            } else {
               toast.error(response2.message);
               setIsLoading({ ...defaultLoading, data: false });
-              return ;
+              return;
             }
           }
           updatedViewDetails.push(obj);
@@ -96,10 +97,10 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
     } else {
       const response = await updateOneQuizz(details[index]._id, "name", data[index].name.trim());
       console.log(response);
-      
+
       if (response.id === null) {
         toast.error(response.message);
-      }else {
+      } else {
         data[index].lastName = data[index].name;
         setViewDetails(data);
       }
@@ -137,7 +138,7 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
 
   }
 
-  const handleEyeClick = (index , value) => {
+  const handleEyeClick = (index, value) => {
     const data = [...viewDetails];
     for (let i = 0; i < viewDetails.length; i++) data[i].eye = false;
     data[index].view = false;
@@ -145,13 +146,77 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
     setViewDetails(data);
   }
 
+  const checkLink = (index) => {
+    if (!viewDetails[index].link.status) {
+      setIsStop(true);
+      setIsPopUpOpen({ ...defaultPopUp, link: { index, status: true } });
+      return false;
+    } else {
+      return true;
+    }
+  }
+
+  const handleShareClick = (index) => {
+    const verify = checkLink(index);
+    if (!verify) {
+      return;
+    } else {
+      setIsStop(true);
+      setIsPopUpOpen({...defaultPopUp , share: {
+        index: index,
+        status: true
+      }});
+    }
+  }
+
+  const handleTakeQuizz = (index) => {
+    const verify = checkLink(index);
+    if (!verify) {
+      return;
+    } else {
+      setIsStop(false);
+      navigate(details[index].link.address);
+    }
+  }
+
+  const handleUpdateSecuity = (index) => {
+    console.log(details[index]);
+    const sendingData = details[index].questions.map((question) => {
+      return {
+        question: question.question,
+        type: question.type,
+        options: question.options,
+      }
+    });
+    const sendingObj = { user: localStorage.getItem("id"), questions: [...sendingData] }
+    localStorage.setItem('urlDataManual', JSON.stringify(sendingObj));
+    localStorage.removeItem('security');
+    const settingId = details[index].settings;
+    let quizzId = details[index]._id;
+    console.log(settingId, quizzId);
+    setIsStop(false);
+    if (settingId) {
+      navigate(`/create/security/edit/${quizzId}/${settingId}`);
+    } else {
+      navigate(`/create/security/add/${quizzId}`);
+    }
+  }
+
+  const handleCopyClick = async (value) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.info("Message Copied to ClipBoard");
+    } catch (err) {
+      toast.info("Failed to Copy Message");
+    }
+  }
   const isTrues = (index) => {
     return (isLoading.edit.status && isLoading.edit.index === index) || (isLoading.delete.status && isLoading.delete.index === index)
   }
 
   return (
     <>
-      <div className={`flex items-start w-full flex-col gap-3 mt-5 relative ${isPopUpOpen.delete.status ? "opacity-50" : ""}`}>
+      <div className={`flex items-start w-full flex-col gap-3 mt-5 relative ${(isPopUpOpen.delete.status || isPopUpOpen.link.status || isPopUpOpen.share.status) ? "opacity-50" : ""}`}>
         <h1 className="text-2xl font-bold text-[#ffffff]">List of Quizzes</h1>
         {
           isLoading.data && <div className="flex w-full items-center justify-center"><Loader type="big" /></div>
@@ -183,15 +248,15 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
                       {(isLoading.delete.status && isLoading.delete.index === index) && <span><Loader type="very small" /></span>}
                       <span><Trash size={20} /></span>
                     </span>
-                    <div className="cursor-pointer" onClick={(e) => handleEyeClick(index ,!viewDetails[index].eye)}>
-                      {!viewDetails[index].eye && <span><Eye size={20}/></span>}
-                      {viewDetails[index].eye && <span><EyeOff size={20}/></span>}
+                    <div className="cursor-pointer" onClick={(e) => handleEyeClick(index, !viewDetails[index].eye)}>
+                      {!viewDetails[index].eye && <span><Eye size={20} /></span>}
+                      {viewDetails[index].eye && <span><EyeOff size={20} /></span>}
                     </div>
                     <div>
                       {viewDetails[index].view === false && <div className="cursor-pointer" onClick={() => handleViewChange(index, !viewDetails[index].view)}><ChevronDown size={24} /></div>}
                       {viewDetails[index].view === true && <div className="cursor-pointer" onClick={() => handleViewChange(index, !viewDetails[index].view)}><ChevronUp size={24} /></div>}
                     </div>
-                    
+
                   </div>
 
                 </div>
@@ -202,8 +267,8 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
                   <PreviewSettings data={viewDetails[index]} />
                 </div>}
                 <div className="w-full justify-end flex gap-2 text-[12px] sm:text-[16px]">
-                  <div className="w-max p-1 border border-gray-200 border-t-0 rounded-sm font-semibold rounded-t-none bg-[#266e0e] text-white hover:bg-[#468346] cursor-pointer">Take Quizze</div>
-                  <div className="w-max flex items-center gap-1 p-1 border border-gray-200 border-t-0 rounded-sm font-semibold rounded-t-none bg-[#e49a24] text-white hover:bg-[#e8b547] cursor-pointer">
+                  <div className="w-max p-1 border border-gray-200 border-t-0 rounded-sm font-semibold rounded-t-none bg-[#266e0e] text-white hover:bg-[#468346] cursor-pointer" onClick={() => handleTakeQuizz(index)}>Take Quizze</div>
+                  <div className="w-max flex items-center gap-1 p-1 border border-gray-200 border-t-0 rounded-sm font-semibold rounded-t-none bg-[#e49a24] text-white hover:bg-[#e8b547] cursor-pointer" onClick={() => handleShareClick(index)}>
                     <span><Forward size={20} /></span>
                     <span>share</span>
                   </div>
@@ -239,6 +304,72 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
               <label className="flex items-center justify-center p-1 cursor-pointer transition border borde-gray-200 rounded-sm font-semibold bg-[#ff0000] text-white hover:bg-[#ab2424]">
                 <span className="flex items-center gap-1" onClick={() => handleDeleteClick(isPopUpOpen.delete.index)}>Delete</span>
               </label>
+            </div>
+          </div>
+        </div>
+      </div>}
+      {isPopUpOpen.link.status && <div className="absolute z-10 top-50 flex items-center justify-center w-full">
+        <div className="">
+          <div className="flex items-start flex-col gap-1 max-w-90 text-white p-1 border rounded-md px-2 bg-[#0B1020]">
+            <div className="flex items-center justify-between w-full border-b">
+              <span className="text-orange-600 text-lg">Information</span>
+              <span className="cursor-pointer" onClick={() => {
+                setIsPopUpOpen({
+                  ...defaultPopUp, link: {
+                    index: undefined, status: false
+                  }
+                }); setIsStop(false)
+              }}><X size={20} /></span>
+            </div>
+            <div className="py-3">You Did Not Completed the Security Details Update it. To continue to Share/Take Test.
+            </div>
+            <div className="flex items-center justify-between w-full">
+              <button className="flex items-center justify-center p-1 cursor-pointer transition border borde-gray-200 rounded-sm font-semibold bg-[#838186] text-white hover:bg-[#8d8d8e]" onClick={() => {
+                setIsPopUpOpen({
+                  ...defaultPopUp, link: {
+                    index: undefined, status: false
+                  }
+                }); setIsStop(false)
+              }}>Cancel</button>
+              <label className="flex items-center justify-center p-1 cursor-pointer transition border borde-gray-200 rounded-sm font-semibold bg-[#1a792f] text-white hover:bg-[#136b1d]" onClick={() => handleUpdateSecuity(isPopUpOpen.link.index)} >
+                <span className="flex items-center gap-1">Update Details</span>
+
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>}
+      {isPopUpOpen.share.status && <div className="absolute z-10 top-50 flex items-center justify-center w-full">
+        <div className="">
+          <div className="flex items-start flex-col gap-1 max-w-90 text-white p-1 border rounded-md px-2 bg-[#0B1020]">
+            <div className="flex items-center justify-between w-full border-b">
+              <span className="text-orange-600 text-lg">Share</span>
+              <span className="cursor-pointer" onClick={() => {
+                setIsPopUpOpen({
+                  ...defaultPopUp, delete: {
+                    index: undefined, status: false
+                  }
+                }); setIsStop(false)
+              }}><X size={20} /></span>
+            </div>
+            <div className="py-3"><div className="flex items-center flex-wrap gap-2 w-full">
+              {viewDetails[isPopUpOpen.share.index].link.status && <><div className="flex  items-center text-sm text-orange-500 border border-gray-500 rounded-md p-1 bg-gray-600/50 wrap-break-words whitespace-normal underline"><Link to={viewDetails[isPopUpOpen.share.index].link.address} target="_blank">{viewDetails[isPopUpOpen.share.index].link.address.substring(0,40)}...</Link></div>
+                <span className="cursor-pointer wrap-break-word whitespace-normal w-10" onClick={() => handleCopyClick(viewDetails[isPopUpOpen.share.index].link.address)}><Copy size={18} /></span></>
+              }
+              {!viewDetails[isPopUpOpen.share.index].link.status && <div className="flex  items-center text-lg text-orange-500 border border-gray-500 rounded-md p-1 bg-gray-600/50 wrap-break-words whitespace-normal">To Active the Link,Click on the Pencil Icon.</div>}
+              <div className={`w-3 h-3 rounded-md ${viewDetails[isPopUpOpen.share.index].link.status ? "bg-green-600" : "bg-red-600"}`} title={viewDetails[isPopUpOpen.share.index].link.status ? "Link is Active" : "Link No Active"}></div>
+
+            </div>
+            </div>
+            <div className="flex items-center justify-between w-full">
+              <button className="flex items-center justify-center p-1 cursor-pointer transition border borde-gray-200 rounded-sm font-semibold bg-[#838186] text-white hover:bg-[#8d8d8e]" onClick={() => {
+                setIsPopUpOpen({
+                  ...defaultPopUp, delete: {
+                    index: undefined, status: false
+                  }
+                }); setIsStop(false)
+              }}>Close</button>
+
             </div>
           </div>
         </div>

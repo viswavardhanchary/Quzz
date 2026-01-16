@@ -3,9 +3,10 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom"
 import Loader from "../components/Loader";
 import { toast } from "react-toastify";
-import { addQuizz, getQuizz, updateQuizz } from "../api/quizzApi";
+import { addQuizz, getQuizz, updateOneQuizz, updateQuizz } from "../api/quizzApi";
 import { useNavigate } from 'react-router-dom'
-import { addSettings, getSettings, removeSettings, updateSettings } from "../api/settingApi";
+import { addSettings, getSettings, updateSettings } from "../api/settingApi";
+import { WEBSITE_LINK } from "../utils/constants";
 import { validateUser,formatDate } from "../api/reCalls";
 export default function Security() {
   const location = useLocation();
@@ -218,11 +219,19 @@ export default function Security() {
         const urlData = JSON.parse(localStorage.getItem('urlDataManual'));
         let res2;
         if (quizzId) {
-          res2 = await updateQuizz({ ...urlData, name: details.basic.name, password: details.basic.password.value, setting: res1.id, link: details.basic.link }, quizzId);
+          res2 = await updateQuizz({ ...urlData, name: details.basic.name, password: details.basic.password.value, setting: res1.id, link: details.basic.link }, quizzId);        
         } else {
           res2 = await addQuizz({ ...urlData, name: details.basic.name, password: details.basic.password.value, setting: res1.id, link: details.basic.link });
         }
         if (res2.id) {
+          if(details.basic.link.status) {
+            const updatedLink = {...details.basic.link , address: `${WEBSITE_LINK}quizz/test/${res2.id}`};
+            const res3 = await updateOneQuizz(res2.id , "link" , updatedLink);
+            if(!res3.id) {
+              toast.error(res3.message);
+              return ;
+            }
+          }
           localStorage.removeItem('security');
           localStorage.removeItem('urlDataManual')
           localStorage.removeItem('edit')

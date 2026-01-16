@@ -24,6 +24,14 @@ export default function CreateQuzz() {
       index: undefined,
       status: false
     },
+    link: {
+      index: undefined,
+      status: false
+    },
+    share: {
+      index: undefined,
+      status: false
+    }
   }
   const [isPopUpOpen , setIsPopUpOpen] = useState(defaultPopUp);
   const [isLoading, setIsLoading] = useState(defaultLoading);

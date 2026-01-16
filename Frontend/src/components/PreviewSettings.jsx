@@ -1,4 +1,18 @@
+import { Copy } from "lucide-react";
+import { toast } from 'react-toastify'
+import { Link } from "react-router-dom";
+import { WEBSITE_LINK } from "../utils/constants";
+
 export default function PreviewSettings({ data }) {
+  const handleCopyClick = async (value) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.info("Message Copied to ClipBoard");
+    } catch (err) {
+      toast.info("Failed to Copy Message");
+    }
+
+  }
   return (
     <>
       <div className="flex flex-col items-start gap-5 p-2 w-full text-white">
@@ -9,6 +23,9 @@ export default function PreviewSettings({ data }) {
         {
           data.setting &&
           <div className="flex flex-col gap-2 items-start w-full">
+             <div className="flex items-center gap-2 w-full">
+              <Link to={`${WEBSITE_LINK}quizz/test/dashboard/${data.id}`}className="flex  items-center text-lg text-orange-500 border border-gray-500 rounded-md p-1 bg-gray-600/50 wrap-break-words whitespace-normal underline" target="_blank">View DashBoard</Link>
+            </div>
             <div className="flex items-center gap-2 w-full">
               <span>Name: </span>
               <div className="flex  items-center text-lg text-orange-500 border border-gray-500 rounded-md p-1 bg-gray-600/50 wrap-break-words whitespace-normal">{data.name}</div>
@@ -16,12 +33,16 @@ export default function PreviewSettings({ data }) {
             <div className="flex items-center gap-2 w-full">
               <span>Password: </span>
               <div className="flex  items-center text-lg text-orange-500 border border-gray-500 rounded-md p-1 bg-gray-600/50 wrap-break-words whitespace-normal">{data.password}</div>
+              <span className="cursor-pointer" onClick={() => handleCopyClick(data.password)}><Copy size={18} /></span>
             </div>
             <div className="flex items-center gap-2 w-full">
               <span>Link: </span>
-              {data.link.status && <div className="flex  items-center text-lg text-orange-500 border border-gray-500 rounded-md p-1 bg-gray-600/50 wrap-break-words whitespace-normal">{data.link.address + "hello"}</div>}
+              {data.link.status && <><div className="flex  items-center text-lg text-orange-500 border border-gray-500 rounded-md p-1 bg-gray-600/50 wrap-break-words whitespace-normal underline"><Link to={data.link.address} target="_blank">{data.link.address}</Link></div>
+                <span className="cursor-pointer" onClick={() => handleCopyClick(data.link.address)}><Copy size={18} /></span></>
+              }
               {!data.link.status && <div className="flex  items-center text-lg text-orange-500 border border-gray-500 rounded-md p-1 bg-gray-600/50 wrap-break-words whitespace-normal">To Active the Link,Click on the Pencil Icon.</div>}
               <div className={`w-3 h-3 rounded-md ${data.link.status ? "bg-green-600" : "bg-red-600"}`} title={data.link.status ? "Link is Active" : "Link No Active"}></div>
+
             </div>
             <div className="flex items-center gap-2 w-full">
               <span>Full Screen Mode: </span>
@@ -35,7 +56,7 @@ export default function PreviewSettings({ data }) {
                 data.setting.security.tabSwitching.status ? `Enabled, ${data.setting.security.tabSwitching.count} Allowed` : "Not Enabled"
               }</div>
             </div>
-             <div className="flex items-center gap-2 w-full">
+            <div className="flex items-center gap-2 w-full">
               <span>Video: </span>
               <div className="flex  items-center text-lg text-orange-500 border border-gray-500 rounded-md p-1 bg-gray-600/50 wrap-break-words whitespace-normal">{
                 data.setting.security.video ? `Enabled` : "Not Enabled"
@@ -68,34 +89,34 @@ export default function PreviewSettings({ data }) {
             <div className="flex items-center gap-2 w-full">
               <span>Duration: </span>
               <div className="flex  items-center text-lg text-orange-500 border border-gray-500 rounded-md p-1 bg-gray-600/50 wrap-break-words whitespace-normal">{
-                data.setting.access.duration.hrs + " Hour " + data.setting.access.duration.minutes + " Minutes" 
+                data.setting.access.duration.hrs + " Hour " + data.setting.access.duration.minutes + " Minutes"
               }</div>
             </div>
             <div className="flex items-center gap-2 w-full">
               <span>Marks: </span>
               <div className="flex  items-center text-lg text-orange-500 border border-gray-500 rounded-md p-1 bg-gray-600/50 wrap-break-words whitespace-normal">
-              {
-                data.setting.evalution.count && "Only Count Correct and Wrong Answers"
-              }
-              {
-                data.setting.evalution.award.status && `Correct Answer: ${data.setting.evalution.award.correct} Marks, Wrong Answer: -${data.setting.evalution.award.wrong}` 
-              }
+                {
+                  data.setting.evalution.count && "Only Count Correct and Wrong Answers"
+                }
+                {
+                  data.setting.evalution.award.status && `Correct Answer: ${data.setting.evalution.award.correct} Marks, Wrong Answer: -${data.setting.evalution.award.wrong}`
+                }
               </div>
             </div>
             <div className="flex items-center gap-2 w-full">
               <span>Results: </span>
               <div className="flex  items-center text-lg text-orange-500 border border-gray-500 rounded-md p-1 bg-gray-600/50 wrap-break-words whitespace-normal">
-              {
-                data.setting.evalution.results ? "Results Should be Shown" : "Result Will not be Displayed"
-              }
+                {
+                  data.setting.evalution.results ? "Results Should be Shown" : "Result Will not be Displayed"
+                }
               </div>
             </div>
             <div className="flex items-center gap-2 w-full">
               <span>LeaderBoard: </span>
               <div className="flex  items-center text-lg text-orange-500 border border-gray-500 rounded-md p-1 bg-gray-600/50 wrap-break-words whitespace-normal">
-              {
-                data.setting.evalution.leaderboard ? "Leaderboard Should be Shown" : "Leaderboard Will not be Displayed"
-              }
+                {
+                  data.setting.evalution.leaderboard ? "Leaderboard Should be Shown" : "Leaderboard Will not be Displayed"
+                }
               </div>
             </div>
 
@@ -106,7 +127,7 @@ export default function PreviewSettings({ data }) {
             No Security Create.
           </div>
         }
-        </div>
+      </div>
     </>
   )
 }

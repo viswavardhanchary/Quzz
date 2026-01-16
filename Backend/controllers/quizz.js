@@ -11,7 +11,7 @@ const getQuizz = async (req , res) => {
     });
   }
   try {
-    const result = await Quizzs.findOne({_id : id});
+    const result = await Quizzs.findOne({_id : id}).populate("user");
     console.log(result);
     if(result) {
       return res.status(200).send({

@@ -11,7 +11,7 @@ export default function ActionLinks({ handleHamClick, id ,setId}) {
   }
   return (
     <>
-      <Link to="/uploadfile" onClick={handleHamClick} className='w-full sm:w-max p-1 border borde-gray-200 rounded-sm font-semibold bg-[#7C3AED] text-white hover:bg-[#6D28D9]'>Upload Files</Link>
+      <Link to="/create" onClick={handleHamClick} className='w-full sm:w-max p-1 border borde-gray-200 rounded-sm font-semibold bg-[#7C3AED] text-white hover:bg-[#6D28D9]'>Upload Files</Link>
       {
         id === null && <>
           <Link to="/register" onClick={handleHamClick} className='w-full sm:w-max p-1 border borde-gray-200 rounded-sm font-semibold bg-[#7C3AED] text-white hover:bg-[#6D28D9] cursor-pointer'>Create Account</Link>
