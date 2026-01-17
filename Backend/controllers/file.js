@@ -9,7 +9,8 @@ const uploadFile = async (req, res) => {
       data: quizData
     });
   } catch (err) {
-    res.status(200).send({
+    console.log(err);
+    res.status(500).send({
       message: err.message,
       data: null
     });
