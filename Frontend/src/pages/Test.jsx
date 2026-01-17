@@ -19,7 +19,8 @@ export default function Test() {
   const { setIsStop } = useOutletContext();
   const defaultPopUp = {
     fullScreen: false,
-    start: false
+    start: false,
+    noaccess: false
   }
   const defaultLoading = {
     data: false,
@@ -63,8 +64,8 @@ export default function Test() {
         if (response2.data) {
           setSettings(response2.data);
           setDetails(response.data);
-          console.log(response.data);
-          console.log(response2.data);
+          // console.log(response.data);
+          // console.log(response2.data);
         } else {
           toast.error(response2.message);
         }
@@ -89,6 +90,11 @@ export default function Test() {
   }
 
   const handleStartTest = () => {
+    if(new Date(settings.access.date.end) < new Date()) {
+      setIsStop(true);
+    setIsPopUpOpen({...defaultPopUp , noaccess: true});
+    return ;
+    }
     setIsStop(true);
     setIsPopUpOpen({...defaultPopUp , start: true});
   }
@@ -107,7 +113,7 @@ export default function Test() {
 
   return (
     <>
-      {!loginPopUp && <div className={`relative pt-5 px-2 flex flex-col gap-5 items-start  ${ isPopUpOpen.start? "opacity-50" : ""}`}>
+      {!loginPopUp && <div className={`relative pt-5 px-2 flex flex-col gap-5 items-start  ${ (isPopUpOpen.start || isPopUpOpen.noaccess)? "opacity-50" : ""}`}>
         <div className="flex items-center justify-between w-full flex-wrap gap-2">
           <div className="flex flex-col gap-1 items-center">
             <h1 className="text-2xl text-[#ff9100] text-center">Welcome to the Test.</h1>
@@ -179,6 +185,37 @@ export default function Test() {
               }}>Cancel</button>
               <label className="flex items-center justify-center p-1 cursor-pointer transition border borde-gray-200 rounded-sm font-semibold bg-[#ff0000] text-white hover:bg-[#ab2424]">
                 <span className="flex items-center gap-1" onClick={() => handlePasswordCheck()}>Check</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>}
+       {isPopUpOpen.noaccess && <div className="absolute z-10 top-50 flex items-center justify-center w-full">
+        <div className="">
+          <div className="flex items-start flex-col gap-1 max-w-90 text-white p-1 border rounded-md px-2 bg-[#0B1020]">
+            <div className="flex items-center justify-between w-full border-b">
+              <span className="text-orange-600 text-lg">Requirement</span>
+              <span className="cursor-pointer" onClick={() => {
+                setIsPopUpOpen({
+                  ...defaultPopUp, noaccess: false
+                }); setIsStop(false);
+              }}><X size={20} /></span>
+            </div>
+            <div className="py-3">
+              The Quizz Deadline is Completed,Plz Contact the Quizz owner.
+            </div>
+            <div className="flex items-center justify-between w-full">
+              <button className="flex items-center justify-center p-1 cursor-pointer transition border borde-gray-200 rounded-sm font-semibold bg-[#838186] text-white hover:bg-[#8d8d8e]" onClick={() => {
+                setIsPopUpOpen({
+                  ...defaultPopUp, noaccess: false
+                }); setIsStop(false); 
+              }}>Close</button>
+              <label className="flex items-center justify-center p-1 cursor-pointer transition border borde-gray-200 rounded-sm font-semibold bg-[#ff0000] text-white hover:bg-[#ab2424]">
+                <span className="flex items-center gap-1" onClick={() => {
+                  setIsPopUpOpen({
+                  ...defaultPopUp, noaccess: false
+                }); setIsStop(false); 
+                }}>Ok</span>
               </label>
             </div>
           </div>

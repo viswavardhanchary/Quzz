@@ -61,7 +61,7 @@ export default function QuizzManual({ data }) {
       const id = path[path.length - 1];
       const response = await getQuizz(id);
       if (response.data) {
-        console.log(response.data);
+        // console.log(response.data);
         const data = response.data.questions.map((question) => {
           return {
             question: question.question,
@@ -76,7 +76,7 @@ export default function QuizzManual({ data }) {
             onCloseError: undefined,
           }
         });
-        console.log(data);
+        // console.log(data);
         localStorage.setItem('urlDataManual', JSON.stringify(data));
         localStorage.setItem('edit', JSON.stringify(true));
         localStorage.setItem('settingId', JSON.stringify(response.data?.settings));
@@ -332,14 +332,14 @@ export default function QuizzManual({ data }) {
       const sendingObj = { user: localStorage.getItem("id"), questions: [...sendingData] }
       localStorage.setItem('urlDataManual', JSON.stringify(sendingObj));
       localStorage.removeItem('security');
-      console.log(localStorage.getItem('settingId'))
+      // console.log(localStorage.getItem('settingId'))
       const settingId = localStorage.getItem('settingId') !== 'undefined' ? JSON.parse(localStorage.getItem('settingId')) : null;
       const path = location.pathname.split("/");
       let quizzId = null;
       if (path.includes("edit")) {
         quizzId = path[path.length - 1];
       }
-      console.log(settingId, quizzId);
+      // console.log(settingId, quizzId);
       setIsLoading({ ...defaultLoading, clickType: undefined });
       if (settingId && quizzId) {
         localStorage.removeItem('settingId')

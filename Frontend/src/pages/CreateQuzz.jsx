@@ -10,8 +10,7 @@ import { uploadFile } from "../api/fileApi";
 import { useNavigate } from "react-router-dom";
 import { makeData } from "../api/reCalls";
 export default function CreateQuzz() {
-  // console.log(setIsStop)
-  const {isStop , setIsStop} = useOutletContext()
+  const {setIsStop} = useOutletContext();
   const navigate = useNavigate();
   const defaultLoading = {
     file: false,

@@ -97,13 +97,13 @@ export default function Security() {
     const path = location.pathname.split("/");
     if (path.includes("edit")) {
       const id = path[path.length - 1];
-      console.log(id);
+      // console.log(id);
       const response = await getSettings(id);
-      console.log(response);
+      // console.log(response);
 
       if (response.data) {
         const response2 = await getQuizz(path[path.length - 2]);
-        console.log(response2);
+        // console.log(response2);
         if (response2.data) {
           const basic = {
             name: response2.data.name,
@@ -114,7 +114,7 @@ export default function Security() {
             link: response2.data.link
           }
           const cameData = { basic, security: response.data.security, access: response.data.access, evalution: response.data.evalution }
-          console.log(cameData);
+          // console.log(cameData);
           setDetails(cameData);
           localStorage.setItem('security', JSON.stringify(cameData));
         } else {
@@ -214,7 +214,7 @@ export default function Security() {
         }
         res1 = await addSettings(data);
       }
-      console.log(res1);
+      // console.log(res1);
       if (res1.id) {
         const urlData = JSON.parse(localStorage.getItem('urlDataManual'));
         let res2;
@@ -427,13 +427,13 @@ export default function Security() {
             </div>
             <div className="flex flex-col items-start gap-2">
               <div className="flex flex-col items-start gap-1">
-                <div className="flex items-center gap-2">
-                  <input type="radio" id="all" name="acess" checked={details.access.invite.status} onChange={(e) => handleAccessChange("invite", 'status', e.target.checked)} />
+                <div className="flex items-center gap-2 cursor-not-allowed opacity-30" disabled={true} title="invite is diabled For Now">
+                  {/* <input type="radio" id="all" name="acess" checked={details.access.invite.status} onChange={(e) => handleAccessChange("invite", 'status', e.target.checked)} /> */}
                   <p>Only the People,I Invite</p>
                 </div>
-                {details.access.invite.status && <div className="flex items-center gap-1 text-orange-600 text-sm">
+                {/* {details.access.invite.status && <div className="flex items-center gap-1 text-orange-600 text-sm">
                   details.access.invite
-                </div>}
+                </div>} */}
               </div>
             </div>
             {/* {console.log(new Date(details.access.date.start))}

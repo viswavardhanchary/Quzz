@@ -10,7 +10,7 @@ const submitTest = async (req, res) => {
 
   }
   try {
-    console.log(data);
+    // console.log(data);
     const re1 = await Tests.findOne({ user: data.user, quizz: data.quizz });
     if (re1) {
       if (re1.marks <= data.marks) {
@@ -31,7 +31,7 @@ const submitTest = async (req, res) => {
       startedAt: data.startedAt,
       submittedAt: data.submittedAt
     });
-    console.log(result);
+    // console.log(result);
     if (result) {
       return res.status(200).send({
         message: "Submitted the test",
@@ -45,7 +45,7 @@ const submitTest = async (req, res) => {
     }
 
   } catch (err) {
-    console.log(err);
+    // console.log(err);
     return res.status(500).send({
       message: "Error In Submitting the test",
       id: null
@@ -55,7 +55,7 @@ const submitTest = async (req, res) => {
 
 const getTest = async (req, res) => {
   const { id } = req.params;
-  console.log(id);
+  // console.log(id);
   if (id === null || id === undefined) {
     return res.status(400).send({
       message: "Error In Getting Test",
@@ -64,7 +64,7 @@ const getTest = async (req, res) => {
   }
   try {
     const result = await Tests.findOne({ _id: id });
-    console.log(result);
+    // console.log(result);
     if (result) {
       return res.status(200).send({
         message: "Fetched the Test",
@@ -78,7 +78,7 @@ const getTest = async (req, res) => {
     }
 
   } catch (err) {
-    console.log(err);
+    // console.log(err);
     return res.status(500).send({
       message: "Error In Getting Test",
       data: null
@@ -88,7 +88,7 @@ const getTest = async (req, res) => {
 
 const getTestList = async (req, res) => {
   const { id } = req.params;
-  console.log(id);
+  // console.log(id);
   if (id === null || id === undefined) {
     return res.status(400).send({
       message: "Error In Getting Test",
@@ -97,7 +97,7 @@ const getTestList = async (req, res) => {
   }
   try {
     const result = await Tests.find({ quizz: id }).populate("user");
-    console.log(result);
+    // console.log(result);
     if (result) {
       return res.status(200).send({
         message: "Fetched the Test",
@@ -111,7 +111,7 @@ const getTestList = async (req, res) => {
     }
 
   } catch (err) {
-    console.log(err);
+    // console.log(err);
     return res.status(500).send({
       message: "Error In Getting Test",
       data: null
@@ -119,4 +119,37 @@ const getTestList = async (req, res) => {
   }
 }
 
-module.exports = [getTest, submitTest,getTestList];
+const getUserTestList = async (req, res) => {
+  const { id } = req.params;
+  // console.log(id);
+  if (id === null || id === undefined) {
+    return res.status(400).send({
+      message: "Error In Getting Test",
+      data: null
+    });
+  }
+  try {
+    const result = await Tests.find({ user: id });
+    // console.log(result);
+    if (result) {
+      return res.status(200).send({
+        message: "Fetched the Test",
+        data: result
+      });
+    } else {
+      return res.status(400).send({
+        message: "No Data Found",
+        data: null
+      });
+    }
+
+  } catch (err) {
+    // console.log(err);
+    return res.status(500).send({
+      message: "Error In Getting Test",
+      data: null
+    });
+  }
+}
+
+module.exports = [getTest, submitTest,getTestList,getUserTestList];

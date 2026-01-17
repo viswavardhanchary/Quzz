@@ -3,7 +3,7 @@ const [Settings] = require("../models/setting");
 const addSetting = async (req, res) => {
   const data = req.body;
   try {
-    console.log(data);
+    // console.log(data);
     const response = await Settings.create({security : data.security , access : data.access , evalution: data.evalution});
     if (!response) {
       return res.status(400).send({
@@ -17,7 +17,7 @@ const addSetting = async (req, res) => {
       })
     }
   } catch (err) {
-    console.log(err);
+    // console.log(err);
     return res.status(500).send({
       message: "Failed to Added details",
       id: null

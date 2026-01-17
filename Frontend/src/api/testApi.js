@@ -18,6 +18,15 @@ export const getTestList = async (id) => {
   }
 }
 
+export const getUserTestList = async (id) => {
+  try {
+    const response = await api.get(`/test/get/user/list/${id}`);
+    return response.data;
+  } catch (err) {
+    return err.response.data;
+  }
+}
+
 export const addTest = async (data) => {
   try {
     const response = await api.post(`/test/submit`, data);

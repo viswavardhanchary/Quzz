@@ -18,7 +18,7 @@ export default function TestStart() {
   const path = location.pathname.split("/");
   const quizzId = path[path.length - 1];
   const [details, setDetails] = useState(null);
-  const startedAt = new Date();
+  let startedAt = location.state
   const defaultPopUp = {
     submit: false,
     cancel: false,
@@ -51,10 +51,12 @@ export default function TestStart() {
     document.addEventListener("fullscreenchange", full);
   }, []);
   function menu(e) {
+    if(path[path.length-1] !== 'start') return ;
     e.preventDefault();
     toast.warn("Right Click is Diasbled");
   }
   function keydown(e) {
+    if(path[path.length-1] !== 'start') return ;
     if (
       e.key === "F12" ||
       (e.ctrlKey && e.shiftKey && e.key === "I") ||
@@ -65,6 +67,7 @@ export default function TestStart() {
     }
   }
   function full(e) {
+    if(path[path.length-1] !== 'start') return ;
     if (!document.fullscreenElement) {
       toast.error("Auto submitting the Quizz,Volation!!!!");
       handleFinalSubmit("cancel");
@@ -91,6 +94,7 @@ export default function TestStart() {
       const settingId = response.data.settings;
       const response2 = await getSettings(settingId);
       if (response.data && response2.data) {
+        localStorage.setItem('date' , JSON.stringify(new Date()));
         setSettings(response2.data);
         setDetails(response.data);
         const numberListDummy = response.data.questions.map((question, index) => {
@@ -108,10 +112,10 @@ export default function TestStart() {
           return obj;
         });
         const time = Number(response2.data.access.duration.hrs) * 60 + Number(response2.data.access.duration.minutes);
-        console.log(numberListDummy);
+        // console.log(numberListDummy);
         setTimer(time);
         setNumberList(numberListDummy);
-        console.log(response.data);
+        // console.log(response.data);
         if (response2.data.security.fullScreen) {
           setIsPopUpOpen({ ...defaultPopUp, fullScreen: true });
         }
@@ -235,7 +239,7 @@ export default function TestStart() {
           }
 
         }
-        console.log(fcount, count);
+        // console.log(fcount, count);
 
         if (fcount === count) {
           marks += (settings.evalution.award.status ? settings.evalution.award.correct : 1);
@@ -260,7 +264,7 @@ export default function TestStart() {
           answer
         }
       });
-      console.log(answers);
+      
 
       const status = 'completed';
       const response = await addTest({
@@ -268,15 +272,17 @@ export default function TestStart() {
         quizz: quizzId,
         answers,
         marks,
-        startedAt,
+        startedAt: JSON.parse(localStorage.getItem('date')),
         status,
         submittedAt: new Date()
       });
       if (response.id) {
         toast.success(response.message);
+        //  document.exitFullscreen();
         document.removeEventListener("contextmenu", menu);
         document.removeEventListener("keydown", keydown);
         document.removeEventListener("fullscreenchange", full);
+       
         setIsPopUpOpen({ ...defaultPopUp, submit: false });
         setIsLoading({ ...defaultLoading, submit: false });
         navigate(`/quizz/test/dashboard/${quizzId}`);
@@ -292,13 +298,15 @@ export default function TestStart() {
         quizz: quizzId,
         answers: [{ questionIndex: 0, answer: ['nothing'] }],
         marks: 0,
-        startedAt,
+        startedAt: JSON.parse(localStorage.getItem('date')),
         status: 'cancelled',
         submittedAt: new Date()
       });
+      // document.exitFullscreen();
       document.removeEventListener("contextmenu", menu);
       document.removeEventListener("keydown", keydown);
       document.removeEventListener("fullscreenchange", full);
+      
       if (response.id) {
         navigate(`/quizz/test/dashboard/${quizzId}`);
         toast.success(response.message);
@@ -316,9 +324,11 @@ export default function TestStart() {
   }
 
   const handleFinalCancel = () => {
+    // document.exitFullscreen();
     document.removeEventListener("contextmenu", menu);
     document.removeEventListener("keydown", keydown);
     document.removeEventListener("fullscreenchange", full);
+    
     navigate("/");
   }
 

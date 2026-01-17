@@ -3,7 +3,7 @@ const [Settings] = require('../models/setting');
 
 const getQuizz = async (req , res) => {
   const {id} = req.params;
-  console.log(id);
+  // console.log(id);
   if(id === null || id === undefined) {
     return res.status(400).send({
       message: "Error In Getting Quizz",
@@ -12,7 +12,7 @@ const getQuizz = async (req , res) => {
   }
   try {
     const result = await Quizzs.findOne({_id : id}).populate("user");
-    console.log(result);
+    // console.log(result);
     if(result) {
       return res.status(200).send({
         message: "Fetched the Quizz",
@@ -26,7 +26,7 @@ const getQuizz = async (req , res) => {
     }
     
   }catch(err) {
-    console.log(err);
+    // console.log(err);
     return res.status(500).send({
       message: "Error In Getting Quizz",
       data: null
@@ -57,7 +57,7 @@ const getQuizzList = async (req,res) => {
     }
     
   }catch(err) {
-    console.log(err);
+    // console.log(err);
     return res.status(500).send({
       message: "Error In Getting Quizzs",
       data: null
@@ -74,9 +74,9 @@ const addQuizz = async (req,res) => {
     });
   }
   try {
-    console.log(data);
+    // console.log(data);
     const result = await Quizzs.create({user: data.user , questions: data.questions , name: data.name , password: data.password , settings: data.setting , link: data.link});
-    console.log(result);
+    // console.log(result);
     if(result) {
       return res.status(200).send({
         message: "Added the Quizz",
@@ -90,7 +90,7 @@ const addQuizz = async (req,res) => {
     }
     
   }catch(err) {
-    console.log(err);
+    // console.log(err);
     return res.status(500).send({
       message: "Error In Adding Quizz",
       id: null
@@ -109,7 +109,7 @@ const updateQuizz = async (req,res) => {
   }
   try {
     const result = await Quizzs.updateOne({_id: id} , {user: data.user , questions: data.questions , name: data.name , password: data.password , settings: data.setting , link: data.link});
-    console.log(result);
+    // console.log(result);
     if(result.modifiedCount !== 0) {
       return res.status(200).send({
         message: "Updated the Quizz",
@@ -123,7 +123,7 @@ const updateQuizz = async (req,res) => {
     }
     
   }catch(err) {
-    console.log(err);
+    // console.log(err);
     return res.status(500).send({
       message: "Error In Updating Quizz",
       id: null
@@ -133,9 +133,9 @@ const updateQuizz = async (req,res) => {
 
 const updateOneQuizz = async (req,res) => {
   const {field , id} = req.params;
-  console.log(req.params);
+  // console.log(req.params);
   const data = req.body;
-  console.log(data);
+  // console.log(data);
   if(data === undefined || id === undefined || field === undefined) {
     return res.status(400).send({
       message: "Error In Updating",
@@ -157,7 +157,7 @@ const updateOneQuizz = async (req,res) => {
     }
     
   }catch(err) {
-    console.log(err);
+    // console.log(err);
     return res.status(500).send({
       message: "Error In Updating Quizz",
       id: null
@@ -177,7 +177,7 @@ const deleteQuizz = async (req,res) => {
   try {
     const result = await Quizzs.findOneAndDelete({_id: id});
     await Settings.findOneAndDelete({_id: result.settings});
-    console.log(result);
+    // console.log(result);
     if(result) {
       return res.status(200).send({
         message: "Deleted the Quizz",

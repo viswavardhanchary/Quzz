@@ -91,12 +91,12 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
   }
   const handleUpdateName = async (index) => {
     const data = [...viewDetails];
-    console.log(data.name);
+    // console.log(data.name);
     if (data[index].name?.trim() === '' || data[index].name === data[index].lastName) {
       return;
     } else {
       const response = await updateOneQuizz(details[index]._id, "name", data[index].name.trim());
-      console.log(response);
+      // console.log(response);
 
       if (response.id === null) {
         toast.error(response.message);
@@ -180,7 +180,7 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
   }
 
   const handleUpdateSecuity = (index) => {
-    console.log(details[index]);
+    // console.log(details[index]);
     const sendingData = details[index].questions.map((question) => {
       return {
         question: question.question,
@@ -193,7 +193,7 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
     localStorage.removeItem('security');
     const settingId = details[index].settings;
     let quizzId = details[index]._id;
-    console.log(settingId, quizzId);
+    // console.log(settingId, quizzId);
     setIsStop(false);
     if (settingId) {
       navigate(`/create/security/edit/${quizzId}/${settingId}`);
