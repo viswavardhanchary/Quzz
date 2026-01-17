@@ -1,4 +1,4 @@
-const [Tests] = require('../models/Test.js')
+const [Tests] = require('../models/test.js')
 
 const submitTest = async (req, res) => {
   const data = req.body;
