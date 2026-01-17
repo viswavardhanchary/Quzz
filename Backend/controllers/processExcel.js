@@ -45,7 +45,7 @@ const processExcel = async (filePath , id) => {
 
     return questions;
   } finally {
-    await deleteFileAsync(".\\" + filePath);
+    await deleteFileAsync("./" + filePath);
   }
 }
 
