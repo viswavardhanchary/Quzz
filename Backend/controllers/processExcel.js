@@ -1,61 +1,99 @@
-const XLSX = require("xlsx");
+const ExcelJS = require("exceljs");
 const fs = require("fs");
-const file = require("./file");
 
-const processExcel = async (filePath , id) => {
+const processExcel = async (filePath, id) => {
   try {
-    const workbook = XLSX.readFile(filePath);
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
-
-    const rows = XLSX.utils.sheet_to_json(sheet, {
-      defval: "",
-      raw: true
+    const stream = fs.createReadStream(filePath);
+    const workbookReader = new ExcelJS.stream.xlsx.WorkbookReader(stream, {
+      entries: "emit",
+      sharedStrings: "cache",
+      worksheets: "emit"
     });
 
     const questions = [];
+    let isFirstSheet = true;
 
-    rows.forEach((row, index) => {
-      if (!row.question || !row.type || !row.correct) {
-        throw new Error(`Invalid data at row ${index + 2}`);
+    for await (const worksheetReader of workbookReader) {
+      if (!isFirstSheet) {
+        for await (const row of worksheetReader) {}
+        continue;
       }
 
+      let headers = [];
 
-      const correctSet = row.type !== "textfield" ? new Set(
-        row.correct
-          .toString()
-          .split(",")
-          .map(n => Number(n.trim()))
-      ) : [];
+      for await (const row of worksheetReader) {
+        const rowValues = row.values;
 
-      const options = row.type !== "textfield" ? Object.keys(row)
-        .filter(k => k.startsWith("option"))
-        .map((key, idx) => ({
-          value: row[key],
-          answer: correctSet.has(idx + 1), 
-        }))
-        .filter(opt => opt.value) : [];
+        if (row.number === 1) {
+          headers = rowValues;
+          continue;
+        }
 
-      questions.push({
-        question: row.question,
-        type: row.type,
-        options,
-      });
-    });
+        const rowData = {};
+        headers.forEach((headerName, colIdx) => {
+          if (headerName) {
+            let val = rowValues[colIdx];
+            if (val && typeof val === 'object' && val.text) val = val.text;
+            
+            const key = headerName.toString().trim().toLowerCase();
+            rowData[key] = val !== undefined && val !== null ? val : "";
+          }
+        });
+
+        if (!rowData.question && !rowData.type) continue;
+
+        if (!rowData.question || !rowData.type || !rowData.correct) {
+          throw new Error(`Invalid data at row ${row.number}`);
+        }
+
+        const correctSet = rowData.type !== "textfield" ? new Set(
+          rowData.correct
+            .toString()
+            .split(",")
+            .map(n => Number(n.trim()))
+        ) : new Set();
+
+        const options = [];
+        if (rowData.type !== "textfield") {
+          let optionIdx = 1;
+          headers.forEach((headerName, colIdx) => {
+            if (headerName) {
+              const key = headerName.toString().trim().toLowerCase();
+              if (key.startsWith("option")) {
+                let val = rowValues[colIdx];
+                if (val && typeof val === 'object' && val.text) val = val.text;
+
+                if (val !== undefined && val !== null && val !== "") {
+                  options.push({
+                    value: val,
+                    answer: correctSet.has(optionIdx)
+                  });
+                }
+                optionIdx++;
+              }
+            }
+          });
+        }
+
+        questions.push({
+          question: rowData.question,
+          type: rowData.type,
+          options,
+        });
+      }
+
+      isFirstSheet = false;
+    }
 
     return questions;
   } finally {
-    await deleteFileAsync("./" + filePath);
+    try {
+      await fs.promises.unlink(filePath);
+      console.log(`Successfully deleted temporary upload: ${filePath}`);
+    } catch (error) {
+      console.error('Error clearing file from disk:', error.message);
+    }
   }
-}
+};
 
-async function deleteFileAsync(filePath) {
-  try {
-    await fs.promises.unlink(filePath);
-    console.log(`Successfully deleted ${filePath}`);
-  } catch (error) {
-    console.error('There was an error:', error.message);
-  }
-}
-
-module.exports = [processExcel]
+module.exports = [processExcel];

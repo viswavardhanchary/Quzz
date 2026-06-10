@@ -1,15 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { validateUser } from "../api/reCalls";
 import { getQuizz } from "../api/quizzApi";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import Loader from "../components/Loader";
 import LoginPopUp from "../components/LoginPopUp";
-import { Check, Info, X } from "lucide-react";
+import { Check, Info, X, Camera, Clock, AlertTriangle, LayoutGrid, AlertCircle, ShieldAlert } from "lucide-react";
 import { getSettings } from "../api/settingApi";
 import { addTest } from "../api/testApi";
-import { toast } from 'react-toastify'
-import { useNavigate } from "react-router-dom";
-
+import { toast } from 'react-toastify';
 
 export default function TestStart() {
   const location = useLocation();
@@ -17,44 +15,144 @@ export default function TestStart() {
   const isValid = location.state;
   const path = location.pathname.split("/");
   const quizzId = path[path.length - 1];
+  
   const [details, setDetails] = useState(null);
-  let startedAt = location.state
-  const defaultPopUp = {
-    submit: false,
-    cancel: false,
-    fullScreen: false
-  }
-  const defaultLoading = {
-    data: false,
-    submit: false
-  }
-  const defaultNumberList = {
-    questionNumber: undefined,
-    status: false,
-    answer: []
-  }
-  const [isPopUpOpen, setIsPopUpOpen] = useState(defaultPopUp);
-  const [isLoading, setIsLoading] = useState(defaultLoading);
-  const [loginPopUp, setLoginPopUp] = useState(false);
-  const [numberList, setNumberList] = useState(null);
-  const [timer, setTimer] = useState(0);
-  const [question, setQuestion] = useState(0);
   const [settings, setSettings] = useState(null);
+  const [numberList, setNumberList] = useState(null);
+  
+  const [timer, setTimer] = useState(0); 
+  const [totalSeconds, setTotalSeconds] = useState(0);
+  
+  const [question, setQuestion] = useState(0);
+  const [loginPopUp, setLoginPopUp] = useState(false);
+  const [isPopUpOpen, setIsPopUpOpen] = useState({ submit: false, cancel: false, fullScreen: false });
+  const [isLoading, setIsLoading] = useState({ data: false, submit: false });
 
+  const MAX_TAB_SWITCHES = 3;
+  const [tabSwitchCount, setTabSwitchCount] = useState(0);
+  const [cameraWarning, setCameraWarning] = useState(null); 
+  const [showPreview, setShowPreview] = useState(true);
+  const videoRef = useRef(null);
+
+  const handleFinalSubmitRef = useRef(null);
+
+  const userId = localStorage.getItem("id") || "STUDENT";
+  
+  // Upgraded watermark: better visibility on dark mode without burning the eyes
+  const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="250" height="250"><text x="50%" y="50%" transform="rotate(-45 125 125)" text-anchor="middle" font-family="Arial" font-size="22" font-weight="bold" fill="rgba(255, 255, 255, 0.08)">${userId}</text></svg>`;
+  const encodedSvg = btoa(unescape(encodeURIComponent(svgString))); 
+  const watermarkStyle = { 
+    backgroundImage: `url("data:image/svg+xml;base64,${encodedSvg}")`,
+    backgroundRepeat: 'repeat',
+    position: 'fixed',
+    top: 0, left: 0, right: 0, bottom: 0,
+    pointerEvents: 'none',
+    zIndex: 9999 
+  };
 
   useEffect(() => {
     check();
     getDetails();
-    checkTime();
     document.addEventListener("contextmenu", menu);
     document.addEventListener("keydown", keydown);
     document.addEventListener("fullscreenchange", full);
+    
+    return () => {
+      document.removeEventListener("contextmenu", menu);
+      document.removeEventListener("keydown", keydown);
+      document.removeEventListener("fullscreenchange", full);
+    };
   }, []);
+
+  useEffect(() => {
+    handleFinalSubmitRef.current = handleFinalSubmit;
+  });
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && details && settings) {
+        setTabSwitchCount(prev => {
+          const newCount = prev + 1;
+          if (newCount >= MAX_TAB_SWITCHES) {
+            toast.error("Maximum tab switches exceeded. Test cancelled.");
+            if (handleFinalSubmitRef.current) handleFinalSubmitRef.current("cancel");
+          } else {
+            toast.warn(`⚠️ Warning: Do not switch tabs! (${newCount}/${MAX_TAB_SWITCHES})`);
+          }
+          return newCount;
+        });
+      }
+    };
+    
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [details, settings]);
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setCameraWarning(null); 
+
+      stream.getVideoTracks()[0].onended = () => {
+        if (cameraWarning === null) setCameraWarning(10);
+      };
+      return true;
+    } catch (err) {
+      if (cameraWarning === null) setCameraWarning(10);
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    if (settings?.security?.video) {
+      startCamera();
+    }
+    return () => {
+      if (videoRef.current && videoRef.current.srcObject) {
+        videoRef.current.srcObject.getTracks().forEach(track => track.stop());
+      }
+    }
+  }, [settings]);
+
+  useEffect(() => {
+    let interval;
+    if (cameraWarning !== null) {
+      if (cameraWarning <= 0) {
+        toast.error("Camera disconnected for too long. Test cancelled.");
+        if (handleFinalSubmitRef.current) handleFinalSubmitRef.current("cancel");
+        setCameraWarning(null);
+      } else {
+        interval = setInterval(async () => {
+          setCameraWarning(prev => prev - 1);
+          const reconnected = await startCamera();
+          if (reconnected) setCameraWarning(null);
+        }, 1000);
+      }
+    }
+    return () => clearInterval(interval);
+  }, [cameraWarning]);
+
+  useEffect(() => {
+    let intervalId;
+    if (timer > 0 && !isPopUpOpen.submit && !isPopUpOpen.cancel) {
+      intervalId = setInterval(() => {
+        setTimer(prev => prev - 1);
+      }, 1000);
+    } else if (timer <= 0 && totalSeconds > 0 && !isLoading.submit && !isPopUpOpen.cancel) {
+      handleFinalSubmit();
+    }
+    return () => clearInterval(intervalId);
+  }, [timer, isPopUpOpen.submit, isPopUpOpen.cancel, totalSeconds]);
+
   function menu(e) {
     if(path[path.length-1] !== 'start') return ;
     e.preventDefault();
-    toast.warn("Right Click is Diasbled");
+    toast.warn("Right Click is Disabled");
   }
+  
   function keydown(e) {
     if(path[path.length-1] !== 'start') return ;
     if (
@@ -63,136 +161,103 @@ export default function TestStart() {
       (e.ctrlKey && e.key === "u")
     ) {
       e.preventDefault();
-      toast.warn("Some Shorcuts are Diasbled");
+      toast.warn("Some Shortcuts are Disabled");
     }
   }
+  
   function full(e) {
     if(path[path.length-1] !== 'start') return ;
     if (!document.fullscreenElement) {
-      toast.error("Auto submitting the Quizz,Volation!!!!");
+      toast.error("Auto submitting the Quiz, Violation!!!!");
       handleFinalSubmit("cancel");
     }
   }
+
   async function check() {
-    setIsLoading({ ...defaultLoading, data: true });
+    setIsLoading(prev => ({ ...prev, data: true }));
     const ans = await validateUser();
     if (ans === false) {
-      toast.error("Plz Login To Use!")
+      toast.error("Please Login To Use!");
       setLoginPopUp(true);
     } else {
       setLoginPopUp(false);
     }
-    setIsLoading({ ...defaultLoading, data: false });
+    setIsLoading(prev => ({ ...prev, data: false }));
   }
+
   async function getDetails() {
-    setIsLoading({ ...defaultLoading, data: true });
+    setIsLoading(prev => ({ ...prev, data: true }));
     if (quizzId == null) {
-      toast.error("Error in Fetching Quizz.");
+      toast.error("Error Fetching Quiz.");
       return;
-    } else {
-      const response = await getQuizz(quizzId);
-      const settingId = response.data.settings;
-      const response2 = await getSettings(settingId);
-      if (response.data && response2.data) {
-        localStorage.setItem('date' , JSON.stringify(new Date()));
-        setSettings(response2.data);
-        setDetails(response.data);
-        const numberListDummy = response.data.questions.map((question, index) => {
-          const obj = { ...defaultNumberList, questionNumber: index };
-          if (question.type !== 'textfield') {
-            const updatedOptions = question.options.map((option) => {
-              return {
-                status: false
-              }
-            });
-            obj.answer = updatedOptions;
-          } else {
-            obj.answer = "";
-          }
-          return obj;
-        });
-        const time = Number(response2.data.access.duration.hrs) * 60 + Number(response2.data.access.duration.minutes);
-        // console.log(numberListDummy);
-        setTimer(time);
-        setNumberList(numberListDummy);
-        // console.log(response.data);
-        if (response2.data.security.fullScreen) {
-          setIsPopUpOpen({ ...defaultPopUp, fullScreen: true });
+    } 
+    const response = await getQuizz(quizzId);
+    const settingId = response.data?.settings;
+    if(!settingId) return;
+    const response2 = await getSettings(settingId);
+    
+    if (response.data && response2.data) {
+      localStorage.setItem('date', JSON.stringify(new Date()));
+      setSettings(response2.data);
+      setDetails(response.data);
+      
+      const numberListDummy = response.data.questions.map((q, index) => {
+        const obj = { questionNumber: index, status: false, answer: [] };
+        if (q.type !== 'textfield') {
+          obj.answer = q.options.map(() => ({ status: false }));
+        } else {
+          obj.answer = "";
         }
-      } else {
-        toast.error(response.message);
+        return obj;
+      });
+      setNumberList(numberListDummy);
+
+      const timeInSecs = (Number(response2.data.access.duration.hrs) * 3600) + (Number(response2.data.access.duration.minutes) * 60);
+      setTimer(timeInSecs);
+      setTotalSeconds(timeInSecs);
+
+      if (response2.data.security.fullScreen) {
+        setIsPopUpOpen(prev => ({ ...prev, fullScreen: true }));
       }
+    } else {
+      toast.error(response.message);
     }
-    setIsLoading({ ...defaultLoading, data: false });
+    setIsLoading(prev => ({ ...prev, data: false }));
   }
+
   const handleFullScreen = () => {
-    setIsPopUpOpen({
-      ...defaultPopUp, fullScreen: false
-    });
+    setIsPopUpOpen(prev => ({ ...prev, fullScreen: false }));
     document.documentElement.requestFullscreen();
   }
 
-  const checkTime = () => {
-    let clearTime = null;
-    clearInterval(clearTime);
-
-    clearTime = setInterval(() => {
-
-      setTimer((prev) => {
-        if (prev - 1 <= 0) {
-          clearInterval(clearTime);
-          handleFinalSubmit();
-        }
-        return prev - 1;
-      });
-    }, 1000 * 60);
+  const formatTime = (secs) => {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   }
 
   const handleNextButton = () => {
-    if (question + 1 === details.questions.length) {
-      handleSubmitButton();
-    } else {
-      setQuestion((prev) => prev + 1);
-    }
+    if (question + 1 === details.questions.length) handleSubmitButton();
+    else setQuestion((prev) => prev + 1);
   }
 
   const handlePrevButton = () => {
-    if (question === 0) {
-      return;
-    } else {
-      setQuestion((prev) => prev - 1);
-    }
+    if (question > 0) setQuestion((prev) => prev - 1);
   }
 
-  const handleSubmitButton = () => {
-    setIsPopUpOpen({ ...defaultPopUp, submit: true });
-  }
-
-  const handleCancelButton = () => {
-    setIsPopUpOpen({ ...defaultPopUp, cancel: true });
-  }
+  const handleSubmitButton = () => setIsPopUpOpen(prev => ({ ...prev, submit: true }));
+  const handleCancelButton = () => setIsPopUpOpen(prev => ({ ...prev, cancel: true }));
 
   const handleClickAnswer = (type, index, value) => {
     const data = [...numberList];
     if (type === 'option') {
-      for (let i = 0; i < data[question].answer.length; i++) {
-        data[question].answer[i] = {
-          status: false
-        }
-      }
-      data[question].answer[index] = {
-        status: value
-      }
+      data[question].answer.forEach(a => a.status = false);
+      data[question].answer[index] = { status: value };
     } else if (type === 'checkbox') {
-      data[question].answer[index] = {
-        status: value
-      }
+      data[question].answer[index] = { status: value };
     }
-    let clicked = false;
-    for (let i = 0; i < data[question].answer.length; i++) {
-      clicked ||= data[question].answer[i].status;
-    }
-    data[question].status = clicked;
+    data[question].status = data[question].answer.some(a => a.status);
     setNumberList(data);
   }
 
@@ -203,45 +268,25 @@ export default function TestStart() {
     setNumberList(data);
   }
 
-  const correctCount = () => {
-    let count = 0;
-    for (let i = 0; i < numberList.length; i++) {
-      if (numberList[i].status) count++;
-    }
-    return count;
-  }
+  const correctCount = () => numberList.filter(n => n.status).length;
+  const wrongCount = () => details.questions.length - correctCount();
 
-  const wrongCount = () => {
-    return details.questions.length - correctCount();
-  }
   const handleFinalSubmit = async (value) => {
-    setIsLoading({ ...defaultLoading, submit: true });
+    setIsLoading(prev => ({ ...prev, submit: true }));
+
+    if (videoRef.current && videoRef.current.srcObject) {
+      videoRef.current.srcObject.getTracks().forEach(track => track.stop());
+    }
+
     if (!value) {
       let marks = 0;
       for (let i = 0; i < details.questions.length; i++) {
-        let count = 0;
-        let fcount = 0
+        let count = 0, fcount = 0;
         for (let j = 0; j < details.questions[i].options.length; j++) {
-          if (details.questions[i].type === 'option') {
-            if (details.questions[i].options[j].answer && numberList[i].answer[j].status) {
-              count++;
-
-            } if (details.questions[i].options[j].answer) {
-              fcount++;
-            }
-          } else if (details.questions[i].type === 'checkbox') {
-            if (details.questions[i].options[j].answer && numberList[i].answer[j].status) {
-              count++;
-
-            } if (details.questions[i].options[j].answer) {
-              fcount++;
-            }
-          }
-
+          if (details.questions[i].options[j].answer && numberList[i].answer[j].status) count++;
+          if (details.questions[i].options[j].answer) fcount++;
         }
-        // console.log(fcount, count);
-
-        if (fcount === count) {
+        if (fcount === count && fcount !== 0) {
           marks += (settings.evalution.award.status ? settings.evalution.award.correct : 1);
         } else {
           marks += (settings.evalution.award.status ? -settings.evalution.award.wrong : 0);
@@ -251,47 +296,27 @@ export default function TestStart() {
       const answers = numberList.map((cur, index) => {
         let answer = []
         if (details.questions[index].type === 'option' || details.questions[index].type === 'checkbox') {
-          for (let i = 0; i < cur.answer.length; i++) {
-            if (cur.answer[i].status) {
-              answer.push(String(i))
-            }
-          }
+          cur.answer.forEach((a, i) => { if (a.status) answer.push(String(i)) });
         } else {
           answer.push(cur.answer);
         }
-        return {
-          questionIndex: index,
-          answer
-        }
+        return { questionIndex: index, answer }
       });
-      
 
-      const status = 'completed';
       const response = await addTest({
         user: localStorage.getItem("id"),
         quizz: quizzId,
         answers,
         marks,
         startedAt: JSON.parse(localStorage.getItem('date')),
-        status,
+        status: 'completed',
         submittedAt: new Date()
       });
+      
       if (response.id) {
         toast.success(response.message);
-        //  document.exitFullscreen();
-        document.removeEventListener("contextmenu", menu);
-        document.removeEventListener("keydown", keydown);
-        document.removeEventListener("fullscreenchange", full);
-       
-        setIsPopUpOpen({ ...defaultPopUp, submit: false });
-        setIsLoading({ ...defaultLoading, submit: false });
         navigate(`/quizz/test/dashboard/${quizzId}`);
-      } else {
-        toast.error(response.message);
-
-      }
-      setIsPopUpOpen({ ...defaultPopUp, submit: false });
-      setIsLoading({ ...defaultLoading, submit: false });
+      } else toast.error(response.message);
     } else {
       const response = await addTest({
         user: localStorage.getItem("id"),
@@ -302,218 +327,284 @@ export default function TestStart() {
         status: 'cancelled',
         submittedAt: new Date()
       });
-      // document.exitFullscreen();
-      document.removeEventListener("contextmenu", menu);
-      document.removeEventListener("keydown", keydown);
-      document.removeEventListener("fullscreenchange", full);
-      
       if (response.id) {
         navigate(`/quizz/test/dashboard/${quizzId}`);
-        toast.success(response.message);
-        setIsPopUpOpen({ ...defaultPopUp, submit: false });
-        setIsLoading({ ...defaultLoading, submit: false });
-      } else {
-        navigate(`/quizz/test/dashboard/${quizzId}`);
-        toast.error(response.message);
-
-      }
-      setIsPopUpOpen({ ...defaultPopUp, submit: false });
-      setIsLoading({ ...defaultLoading, submit: false });
+        toast.success("Test was Cancelled.");
+      } else toast.error(response.message);
     }
-
+    setIsPopUpOpen({ submit: false, cancel: false, fullScreen: false });
+    setIsLoading(prev => ({ ...prev, submit: false }));
   }
 
-  const handleFinalCancel = () => {
-    // document.exitFullscreen();
-    document.removeEventListener("contextmenu", menu);
-    document.removeEventListener("keydown", keydown);
-    document.removeEventListener("fullscreenchange", full);
-    
-    navigate("/");
-  }
+  const isTimeBlinking = totalSeconds > 0 && timer <= (totalSeconds * 0.1);
 
   return (
     <>
-      {isValid && !loginPopUp && !isLoading.data && details &&
-        <div className={`relative flex items-top w-full h-screen ${(isPopUpOpen.submit || isPopUpOpen.cancel || isPopUpOpen.fullScreen) && "opacity-40"}`}>
-          {numberList &&
-            <div className="bg-[#489dde] flex flex-col gap-6 items-center border-r p-2 h-screen flex-1">
-              <div className="flex items-center w-full justify-center sm:justify-between">
-                <div className="flex flex-col gap-1 items-center">
-                  <h1 className="sm:text-xl text-[#f7fb00] text-center">Questions List</h1>
-                  <div className="border w-5 sm:w-20 border-white"></div>
+      {cameraWarning !== null && (
+        <div className="fixed inset-0 z-100000 bg-black/95 flex flex-col items-center justify-center text-[#EEEEEE] p-5 text-center backdrop-blur-md">
+           <ShieldAlert size={80} className="text-[#EF4444] mb-6" />
+           <h1 className="text-4xl font-bold mb-4">Camera Disconnected</h1>
+           <p className="text-xl mb-2 text-[#CCCCCC]">Please plug in or allow access to your camera immediately.</p>
+           <p className="text-lg text-[#888888]">This assessment requires active video monitoring.</p>
+           <p className="text-2xl mt-8">Auto-cancelling in <strong className="text-5xl mx-2 text-[#EF4444]">{cameraWarning}</strong> seconds...</p>
+        </div>
+      )}
+
+      {settings?.security?.video && (
+        <div className={`fixed bottom-6 right-6 z-5000 bg-[#1A1A1A] shadow-2xl border border-[#444] overflow-hidden transition-all duration-300 ${showPreview ? 'w-64 h-48 rounded-lg' : 'w-14 h-14 rounded-full cursor-pointer hover:border-[#DE5833]'}`} onClick={() => !showPreview && setShowPreview(true)}>
+          <video 
+            ref={videoRef} 
+            autoPlay 
+            playsInline 
+            muted 
+            className={`w-full h-full object-cover transform scale-x-[-1] transition-opacity duration-200 ${showPreview ? 'opacity-100' : 'opacity-0 absolute'}`} 
+          />
+          
+          {!showPreview && (
+            <div className="absolute inset-0 flex items-center justify-center text-[#AAAAAA] hover:text-[#EEEEEE] transition-colors" title="Show Camera">
+              <Camera size={24} />
+            </div>
+          )}
+
+          {showPreview && (
+            <div className="absolute top-2 right-2 bg-black/60 rounded-full p-1.5 cursor-pointer z-10 text-[#AAAAAA] hover:text-white hover:bg-[#EF4444] transition-colors" onClick={(e) => { e.stopPropagation(); setShowPreview(false); }}>
+              <X size={14} strokeWidth={3} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {isValid && !loginPopUp && !isLoading.data && details && (
+        <div className={`flex w-full h-screen bg-[#111111] text-[#EEEEEE] overflow-hidden relative ${(isPopUpOpen.submit || isPopUpOpen.cancel || isPopUpOpen.fullScreen) ? "opacity-40 pointer-events-none" : ""}`}>
+          
+          <div style={watermarkStyle}></div>
+
+          {numberList && (
+            <div className="w-20 sm:w-64 shrink-0 bg-[#1A1A1A] border-r border-[#333333] flex flex-col h-screen z-10 shadow-lg">
+              <div className="p-4 border-b border-[#333333] bg-[#222222] flex items-center gap-3">
+                <LayoutGrid className="text-[#DE5833]" size={20} />
+                <h2 className="hidden sm:block font-semibold text-[#EEEEEE]">Question Grid</h2>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-4 content-start">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 justify-items-center sm:justify-items-start">
+                  {numberList.map((current, index) => (
+                    <button 
+                      key={index} 
+                      onClick={() => setQuestion(index)}
+                      className={`
+                        w-10 h-10 rounded text-sm font-bold flex items-center justify-center transition-all
+                        ${question === index ? "ring-2 ring-offset-2 ring-offset-[#1A1A1A] ring-[#DE5833]" : ""}
+                        ${current.status ? "bg-[#DE5833] text-white border border-[#DE5833]" : "bg-[#222222] text-[#888888] border border-[#444444] hover:bg-[#333333] hover:text-[#EEEEEE]"}
+                      `}
+                    >
+                      {current.questionNumber + 1}
+                    </button>
+                  ))}
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-5 overflow-auto justify-center">
-                {
-                  numberList && numberList.map((current, index) => {
-                    return <div className={`${current.status ? "bg-green-600 text-white" : "bg-white text-black"} ${question === index ? "border-orange-600" : "border-black"} border-2  w-10 h-10 rounded-full flex items-center justify-center cursor-pointer`} key={index}>
-                      {current.questionNumber + 1}
-                    </div>
-                  })
-                }
+
+              <div className="hidden sm:flex flex-col p-4 border-t border-[#333333] bg-[#222222] gap-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2 text-[#AAAAAA]"><div className="w-3 h-3 bg-[#DE5833] rounded-sm"></div> Answered</span>
+                  <span className="font-semibold text-[#EEEEEE]">{correctCount()}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2 text-[#AAAAAA]"><div className="w-3 h-3 bg-[#222222] border border-[#444444] rounded-sm"></div> Pending</span>
+                  <span className="font-semibold text-[#EEEEEE]">{wrongCount()}</span>
+                </div>
               </div>
             </div>
-          }
-          <div className="flex flex-col gap-5 items-start border-r h-screen flex-5 bg-blue-100">
-            <div className="border-b w-full p-1 flex items-center justify-between">
-              <h1 className="text-lg sm:text-2xl">Quizz Name: <span className="text-orange-700 font-bold">{details.name}</span></h1>
-              <h1 className={`${timer <= 5 ? "bg-red-500/90" : "bg-gray-600/90"} border text-white p-1 rounded-md`}>Timer: {timer}</h1>
-            </div>
-            <div className="flex w-full justify-between items-center p-1">
-              <div className={`w-max p-1 border border-gray-200 rounded-sm font-semibold  bg-[#ff0000] text-white hover:bg-[#d92828] cursor-pointer`}
-                onClick={handleCancelButton}>Cancel Test</div>
-              <div className="w-max p-1 border border-gray-200  rounded-sm font-semibold  bg-[#7C3AED] text-white hover:bg-[#6D28D9] cursor-pointer float-end" onClick={handleSubmitButton}>Submit Test</div>
-            </div>
-            <div className="h-screen overflow-auto w-full p-2">
-              <div className="w-full">
-                <div className="flex items-center text-xl text-black border border-gray-500 rounded-sm p-1 w-full bg-blue-300 wrap-break-words whitespace-normal">{question + 1}. {details.questions[question].question}</div>
-                {
-                  (details.questions[question].type === "option" || details.questions[question].type === "checkbox") &&
-                  <div className="flex flex-col items-start gap-2 p-1">
-                    {details.questions[question].type === "checkbox" && <div className="text-orange-600 flex items-center gap-1">
-                      <span><Info size={16} /></span>
-                      <span>Select all correct answers.</span>
-                    </div>}
-                    {
-                      numberList && details.questions[question].options.map((option, index2) => {
-                        if (option.value.trim() !== 'n/a') {
-                          return (
-                            <div key={index2} className="flex items-center gap-2 w-full">
+          )}
 
-                              <div className={`border text-black w-4 h-4 ${details.questions[question].type === 'option' ? "rounded-full" : "rounded-sm"} ${numberList[question].answer[index2].status && "bg-green-600"} text-center`} onClick={() => handleClickAnswer(details.questions[question].type, index2, !numberList[question].answer[index2].status)}>
-                                {numberList[question].answer[index2].status && <span><Check size={12} /></span>}
-                              </div>
-                              <div className="flex items-center text-xl text-black border border-gray-500 rounded-sm p-1 w-full bg-blue-300 wrap-break-words whitespace-normal">{option.value}</div>
-                            </div>
-                          )
-                        } else {
-                          return ""
-                        }
-                      })
-                    }
-
+          <div className="flex-1 flex flex-col h-screen relative z-10 bg-[#111111]">
+            
+            <div className="h-16 shrink-0 border-b border-[#333333] bg-[#1A1A1A] flex items-center justify-between px-6">
+              <h1 className="text-lg font-semibold text-[#EEEEEE] truncate max-w-lg">
+                {details.name}
+              </h1>
+              
+              <div className="flex items-center gap-4">
+                <div className={`flex items-center gap-2 px-4 py-1.5 rounded-md border font-mono font-medium transition-colors duration-300 ${isTimeBlinking ? "bg-[#EF4444]/10 border-[#EF4444] text-[#EF4444] animate-pulse" : "bg-[#222222] border-[#444444] text-[#EEEEEE]"}`}>
+                  <Clock size={16} />
+                  <span>{formatTime(timer)}</span>
+                </div>
+                <button 
+                  className="px-4 py-1.5 text-sm font-medium text-[#AAAAAA] hover:text-[#EF4444] transition-colors"
+                  onClick={handleCancelButton}
+                >
+                  Cancel Test
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6 sm:p-10">
+              <div className="w-full max-w-4xl mx-auto">
+                
+                <div className="mb-8">
+                  <div className="flex items-start text-xl sm:text-2xl font-medium text-[#EEEEEE] leading-relaxed">
+                    <span className="text-[#888888] mr-3 font-semibold">{question + 1}.</span> 
+                    {details.questions[question].question}
                   </div>
-                }
-                {
-                  details.questions[question].type === "textfield" &&
-                  <div className="flex flex-col items-start gap-2 py-2"><textarea rows="10" className="outline-none border w-full rounded-md bg-white text-black p-1" placeholder="Enter the Answer" value={numberList[question].answer} onChange={(e) => handleTextChange(e.target.value)}></textarea></div>
-                }
+                </div>
+                
+                {(details.questions[question].type === "option" || details.questions[question].type === "checkbox") && (
+                  <div className="flex flex-col gap-4 mt-6">
+                    {details.questions[question].type === "checkbox" && (
+                      <div className="flex items-center gap-2 text-sm text-[#AAAAAA] bg-[#1A1A1A] border border-[#333333] p-3 rounded-md mb-2 w-max">
+                        <Info size={16} className="text-[#DE5833]" />
+                        <span>Select all correct answers for this question.</span>
+                      </div>
+                    )}
+                    
+                    {numberList && details.questions[question].options.map((option, index2) => {
+                      if (option.value.trim() !== 'n/a') {
+                        const isSelected = numberList[question].answer[index2].status;
+                        const isRadio = details.questions[question].type === 'option';
+                        
+                        return (
+                          <div 
+                            key={index2} 
+                            className={`flex items-center gap-4 w-full p-4 rounded-lg border-2 cursor-pointer transition-all ${isSelected ? "border-[#DE5833] bg-[#DE5833]/10" : "border-[#333333] bg-[#222222] hover:border-[#555555]"}`} 
+                            onClick={() => handleClickAnswer(details.questions[question].type, index2, !isSelected)}
+                          >
+                            <div className={`flex shrink-0 items-center justify-center border-2 w-6 h-6 transition-colors ${isRadio ? "rounded-full" : "rounded-sm"} ${isSelected ? "bg-[#DE5833] border-[#DE5833] text-white" : "border-[#555555] bg-transparent"}`}>
+                              {isSelected && <Check size={14} strokeWidth={3} />}
+                            </div>
+                            <div className={`text-base leading-relaxed ${isSelected ? "text-[#EEEEEE] font-medium" : "text-[#CCCCCC]"}`}>
+                              {option.value}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+                )}
+
+                {details.questions[question].type === "textfield" && (
+                  <div className="flex flex-col gap-2 mt-6 w-full">
+                    <textarea 
+                      rows="8" 
+                      className="w-full bg-[#1A1A1A] border border-[#444] rounded-lg p-4 text-[#EEEEEE] placeholder-[#666] outline-none focus:border-[#DE5833] focus:ring-1 focus:ring-[#DE5833] transition-all resize-y text-base" 
+                      placeholder="Type your detailed answer here..." 
+                      value={numberList[question].answer} 
+                      onChange={(e) => handleTextChange(e.target.value)}
+                    ></textarea>
+                  </div>
+                )}
               </div>
             </div>
-            <div className="flex w-full justify-between items-center p-1">
-              <div className={`w-max p-1 border border-gray-200 rounded-sm font-semibold  bg-[#7C3AED] text-white hover:bg-[#6D28D9]  ${question === 0 ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`} disabled={question === 0}
-                onClick={handlePrevButton}>Previous</div>
-              <div className="w-max p-1 border border-gray-200  rounded-sm font-semibold  bg-[#7C3AED] text-white hover:bg-[#6D28D9] cursor-pointer float-end" onClick={handleNextButton}>{question === details.questions.length - 1 ? "Submit" : "Next"}</div>
+            
+            <div className="shrink-0 flex w-full justify-between items-center p-4 bg-[#1A1A1A] border-t border-[#333333]">
+              <button 
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-md font-medium transition-colors ${question === 0 ? "bg-[#222222] text-[#555555] cursor-not-allowed border border-[#333333]" : "bg-[#333333] border border-[#444444] text-[#EEEEEE] hover:bg-[#444444]"}`} 
+                disabled={question === 0} 
+                onClick={handlePrevButton}
+              >
+                Previous
+              </button>
+              
+              {question === details.questions.length - 1 ? (
+                <button 
+                  className="flex items-center gap-2 px-8 py-2.5 rounded-md font-medium bg-[#DE5833] text-white hover:bg-[#c94f2e] transition-colors shadow-sm"
+                  onClick={handleSubmitButton}
+                >
+                  Submit Assessment
+                </button>
+              ) : (
+                <button 
+                  className="flex items-center gap-2 px-8 py-2.5 rounded-md font-medium bg-[#333333] border border-[#444444] text-[#EEEEEE] hover:bg-[#444444] transition-colors shadow-sm"
+                  onClick={handleNextButton}
+                >
+                  Next Question
+                </button>
+              )}
             </div>
+            
           </div>
         </div>
-      }
-      {
-        isLoading.data && <div className="flex w-full items-center justify-center"><Loader type="big" /></div>
-      }
-      {
-        loginPopUp || !isValid && <LoginPopUp />
-      }
-      {isPopUpOpen.submit && <div className="absolute z-10 top-50 flex items-center justify-center w-full">
-        <div className="">
-          <div className="flex items-start flex-col gap-1 max-w-90 text-white p-1 border rounded-md px-2 bg-[#0B1020]">
-            <div className="flex items-center justify-between w-full border-b">
-              <span className="text-orange-600 text-lg">Information</span>
-              <span className="cursor-pointer" onClick={() => {
-                setIsPopUpOpen({
-                  ...defaultPopUp, submit: false
-                });
-              }}><X size={20} /></span>
+      )}
+      
+      {isLoading.data && <div className="fixed inset-0 flex w-full items-center justify-center bg-[#111111]/80 backdrop-blur-sm z-6000"><Loader type="big" /></div>}
+      {(loginPopUp || !isValid) && <LoginPopUp />}
+      
+      {isPopUpOpen.submit && (
+        <div className="fixed inset-0 z-6000 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="flex flex-col gap-4 w-full max-w-md text-[#EEEEEE] p-6 border border-[#444] rounded-lg bg-[#222] shadow-2xl">
+            <div className="flex items-center justify-between w-full border-b border-[#444] pb-3">
+              <span className="font-semibold text-lg text-[#EEEEEE]">Confirm Submission</span>
+              <button className="text-[#AAAAAA] hover:text-white transition-colors" onClick={() => setIsPopUpOpen(prev => ({ ...prev, submit: false }))}><X size={20} /></button>
             </div>
-            <div className="py-3 flex flex-col items-start gap-2">
-              <span>Your Submitting the Quizze,There is no Re-take,After Submission</span>
-              <div className="flex items-center flex-wrap gap-2 w-full">
-                <span className="text-green-600">{correctCount()} Marked</span>
-                <span className="text-red-600">{wrongCount()} Not visited/Un Marked</span>
+            <div className="py-2 flex flex-col items-start gap-4 w-full">
+              <p className="text-[#CCCCCC] text-sm leading-relaxed">Are you sure you want to submit your assessment? You cannot modify your answers after submission.</p>
+              <div className="flex items-center justify-between w-full bg-[#1A1A1A] p-4 rounded-lg border border-[#333333]">
+                <div className="flex flex-col items-center flex-1">
+                  <span className="text-2xl font-bold text-[#10B981]">{correctCount()}</span>
+                  <span className="text-xs text-[#888888] uppercase tracking-wide mt-1">Answered</span>
+                </div>
+                <div className="h-10 w-px bg-[#444444]"></div>
+                <div className="flex flex-col items-center flex-1">
+                  <span className="text-2xl font-bold text-[#F59E0B]">{wrongCount()}</span>
+                  <span className="text-xs text-[#888888] uppercase tracking-wide mt-1">Pending</span>
+                </div>
               </div>
-
             </div>
-            <div className="flex items-center justify-between w-full">
-              <button className="flex items-center justify-center p-1 cursor-pointer transition border borde-gray-200 rounded-sm font-semibold bg-[#838186] text-white hover:bg-[#8d8d8e]" onClick={() => {
-                setIsPopUpOpen({
-                  ...defaultPopUp, submit: false
-                });
-              }}>Cancel</button>
-              <label className={`flex items-center justify-center p-1 cursor-pointer transition border borde-gray-200 rounded-sm font-semibold bg-[#ff0000] text-white hover:bg-[#ab2424] ${isLoading.submit ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                disabled={isLoading.submit}>
-                <span className="flex items-center gap-1" onClick={() => handleFinalSubmit()}>
-
-                  <span>submit</span>
-                  {isLoading.submit && <Loader type="very small" />}
-                </span>
-              </label>
+            <div className="flex items-center justify-end w-full gap-3 pt-2 mt-2 border-t border-[#444]">
+              <button className="px-4 py-2 rounded-md font-medium text-[#AAAAAA] hover:text-white hover:bg-[#333] transition-colors" onClick={() => setIsPopUpOpen(prev => ({ ...prev, submit: false }))}>Go Back</button>
+              <button className={`flex items-center justify-center px-6 py-2 rounded-md font-medium bg-[#DE5833] text-white hover:bg-[#c94f2e] transition-colors shadow-sm ${isLoading.submit ? "opacity-70 cursor-not-allowed" : ""}`} disabled={isLoading.submit} onClick={() => handleFinalSubmit()}>
+                {isLoading.submit ? <span className="flex items-center gap-2"><Loader type="very small" /> Submitting...</span> : "Yes, Submit"}
+              </button>
             </div>
           </div>
         </div>
-      </div>}
-      {isPopUpOpen.cancel && <div className="absolute z-10 top-50 flex items-center justify-center w-full">
-        <div className="">
-          <div className="flex items-start flex-col gap-1 max-w-90 text-white p-1 border rounded-md px-2 bg-[#0B1020]">
-            <div className="flex items-center justify-between w-full border-b">
-              <span className="text-orange-600 text-lg">Information</span>
-              <span className="cursor-pointer" onClick={() => {
-                setIsPopUpOpen({
-                  ...defaultPopUp, cancel: false
-                });
-              }}><X size={20} /></span>
-            </div>
-            <div className="py-3 flex flex-col items-start gap-2">
-              <span>Your Canceling the Test,Results Will Not be Evaluted</span>
-              <div className="flex items-center flex-wrap gap-2 w-full">
-                <span className="text-green-600">{correctCount()} Marked</span>
-                <span className="text-red-600">{wrongCount()} Not visited/Un Marked</span>
+      )}
+      
+      {isPopUpOpen.cancel && (
+        <div className="fixed inset-0 z-6000 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="flex flex-col gap-4 w-full max-w-md text-[#EEEEEE] p-6 border border-[#444] rounded-lg bg-[#222] shadow-2xl">
+            <div className="flex items-center justify-between w-full border-b border-[#444] pb-3">
+              <div className="flex items-center gap-2 text-[#EF4444]">
+                <AlertTriangle size={20} />
+                <span className="font-semibold text-lg">Cancel Assessment</span>
               </div>
-
+              <button className="text-[#AAAAAA] hover:text-white transition-colors" onClick={() => setIsPopUpOpen(prev => ({ ...prev, cancel: false }))}><X size={20} /></button>
             </div>
-            <div className="flex items-center justify-between w-full">
-              <button className="flex items-center justify-center p-1 cursor-pointer transition border borde-gray-200 rounded-sm font-semibold bg-[#838186] text-white hover:bg-[#8d8d8e]" onClick={() => {
-                setIsPopUpOpen({
-                  ...defaultPopUp, cancel: false
-                });
-              }}>Cancel</button>
-              <label className={`flex items-center justify-center p-1  transition border borde-gray-200 rounded-sm font-semibold bg-[#ff0000] text-white hover:bg-[#ab2424]
-                    `}>
-                <span className={`flex items-center gap-1`} onClick={() => handleFinalCancel()}
-                >submit</span>
-              </label>
+            <div className="py-2 flex flex-col items-start gap-4 w-full">
+              <p className="text-[#CCCCCC] text-sm leading-relaxed">You are about to cancel this test. <strong className="text-[#EF4444]">Your results will not be evaluated and your score will be recorded as 0.</strong></p>
+            </div>
+            <div className="flex items-center justify-end w-full gap-3 pt-2 mt-2 border-t border-[#444]">
+              <button className="px-4 py-2 rounded-md font-medium text-[#AAAAAA] hover:text-white hover:bg-[#333] transition-colors" onClick={() => setIsPopUpOpen(prev => ({ ...prev, cancel: false }))}>Resume Test</button>
+              <button className="flex items-center justify-center px-6 py-2 rounded-md font-medium bg-[#EF4444] text-white hover:bg-[#DC2626] transition-colors shadow-sm" onClick={() => handleFinalSubmit("cancel")}>
+                Confirm Cancel
+              </button>
             </div>
           </div>
         </div>
-      </div>}
-      {isPopUpOpen.fullScreen && <div className="absolute z-10 top-50 flex items-center justify-center w-full">
-        <div className="">
-          <div className="flex items-start flex-col gap-1 max-w-90 text-white p-1 border rounded-md px-2 bg-[#0B1020]">
-            <div className="flex items-center justify-between w-full border-b">
-              <span className="text-orange-600 text-lg">Important!!!</span>
-              {/* <span className="cursor-pointer" onClick={() => {
-                setIsPopUpOpen({
-                  ...defaultPopUp, fullScreen: false
-                }); setIsStop(false); setIsLoading({ ...defaultLoading, requriements: false });
-                toast.info("Without Enabling,Quizz Cannot be Continued")
-              }}><X size={20} /></span> */}
+      )}
+      
+      {isPopUpOpen.fullScreen && (
+        <div className="fixed inset-0 z-6000 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+          <div className="flex flex-col max-w-lg w-full p-0 border border-[#EF4444] rounded-lg bg-[#1A1A1A] overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-center w-full border-b border-[#EF4444]/30 bg-[#EF4444]/10 p-5">
+              <ShieldAlert size={28} className="text-[#EF4444] mr-3" />
+              <span className="text-[#EF4444] font-bold text-xl uppercase tracking-widest">Strict Monitoring Active</span>
             </div>
-            <div className="py-3">Your Entering into Full Screen Mode,Donot Exist the Full Screen Mode,<span className="text-red-600">If Exited,The Quizz Will be Cancled Immediately.</span>
+            <div className="p-8 flex flex-col items-center text-center gap-6 w-full">
+              <p className="text-lg text-[#EEEEEE]">You are entering a strictly monitored Full Screen mode.</p>
+              <div className="bg-[#222222] border border-[#444444] p-5 rounded-md w-full">
+                  <p className="text-[#EF4444] font-semibold flex items-center justify-center gap-2 mb-2"><AlertCircle size={18} /> Do NOT exit full screen or switch tabs.</p>
+                  <p className="text-sm text-[#AAAAAA]">If you leave this screen, your assessment will be immediately cancelled and recorded as a 0.</p>
+              </div>
             </div>
-            <div className="flex items-center justify-between w-full">
-              {/* <button className="flex items-center justify-center p-1 cursor-pointer transition border borde-gray-200 rounded-sm font-semibold bg-[#838186] text-white hover:bg-[#8d8d8e]" onClick={() => {
-                setIsPopUpOpen({
-                  ...defaultPopUp, fullScreen: false
-                }); setIsStop(false); setIsLoading({ ...defaultLoading, requriements: false });
-                toast.info("Without Enabling,Quizz Cannot be Continued")
-              }}>Cancel</button> */}
-              <label className="flex items-center justify-center p-1 cursor-pointer transition border borde-gray-200 rounded-sm font-semibold bg-[#ff0000] text-white hover:bg-[#ab2424]">
-                <span className="flex items-center gap-1" onClick={() => handleFullScreen()}>Ok</span>
-              </label>
+            <div className="flex items-center justify-center w-full bg-[#222222] p-5 border-t border-[#333333]">
+              <button className="w-full flex items-center justify-center px-6 py-3.5 rounded-md font-bold text-base bg-[#DE5833] text-white hover:bg-[#c94f2e] shadow-sm transition-colors" onClick={() => handleFullScreen()}>
+                I Understand, Enter Full Screen
+              </button>
             </div>
           </div>
         </div>
-      </div>}
+      )}
     </>
-  )
+  );
 }

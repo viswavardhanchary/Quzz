@@ -1,128 +1,177 @@
-import { Eye, EyeOff, X, ArrowLeftToLine , CircleCheck, TriangleAlert  } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeftToLine, CircleCheck, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Loader from '../components/Loader';
-import {verifyUser} from '../api/userApi';
-import {toast} from 'react-toastify';
-import { useNavigate } from 'react-router-dom';
+import { verifyUser } from '../api/userApi';
+import { toast } from 'react-toastify';
+
 export default function Login() {
   const navigate = useNavigate();
   const [eyeStatus, setEyeStatus] = useState(false);
-  const [userDetails , setUserDetails] = useState({
+  const [userDetails, setUserDetails] = useState({
     email: "",
-    password : "",
+    password: "",
   });
-  const [verificationDetails , setVerificationDetails] = useState({
-    name: undefined,
+  
+  const [verificationDetails, setVerificationDetails] = useState({
     email: undefined,
+    password: undefined,
   });
-  const [isLoading , setIsLoading] = useState (false);
+  
+  const [isLoading, setIsLoading] = useState(false);
+
   const handleSubmitData = async () => {
     setIsLoading(true);
     const verification = verifyData();
   
-    if(verification.status) {
+    if (verification.status) {
       const response = await verifyUser(userDetails);
-      if(response.id) {
+      if (response.id) {
         toast.success(response.message);
-        localStorage.setItem("id" , response.id);
+        localStorage.setItem("id", response.id);
         setIsLoading(false);
         navigate("/");
-      }else {
+      } else {
         toast.error(response.message);
         setIsLoading(false);
       }
-    }else {
+    } else {
+      setVerificationDetails({
+        email: userDetails.email.trim().length !== 0,
+        password: userDetails.password.trim().length !== 0
+      });
       setIsLoading(false);
-      return ;
     }
-  }
-  const handleEditData = (type , e)=> {
-    setUserDetails((prev) => ({...prev , [type] : e.target.value}));
-  }
-  const verify = (type , e)=>{
-    const typeVerify = userDetails[type].trim().length !== 0 || e.target.value.trim().length!==0;
-    setVerificationDetails((prev) => ({...prev , [type] : typeVerify}));
-  }
+  };
 
-  const verifyData = ()=> {
+  const handleEditData = (type, e) => {
+    setUserDetails((prev) => ({ ...prev, [type]: e.target.value }));
+  };
+
+  const verify = (type, e) => {
+    const typeVerify = userDetails[type].trim().length !== 0 || e.target.value.trim().length !== 0;
+    setVerificationDetails((prev) => ({ ...prev, [type]: typeVerify }));
+  };
+
+  const verifyData = () => {
     return {
       status: verificationDetails.email && verificationDetails.password
-    }
-  }
+    };
+  };
+
+
+  const inputStyles = "w-full bg-[#1A1A1A] border border-[#444] rounded-md p-2.5 text-[#EEEEEE] placeholder-[#888] outline-none focus:border-[#DE5833] focus:ring-1 focus:ring-[#DE5833] transition-all";
+
   return (
     <>
-      <div className="flex items-center justify-center p-2 min-h-screen bg-[#0B1020]">
-        <div className='flex flex-col lg:flex-row items-center text-[#EDE9FE] border rounded-md'>
-          <div>
-            <img src="./images/LoginImage.png" className='h-40 sm:h-50 md:h-80 lg:h-100 lg:w-200' />
+    
+      <div className="flex items-center justify-center p-4 min-h-[calc(100vh-4rem)] bg-[#111111]">
+        
+        <div className="flex flex-col lg:flex-row items-stretch bg-[#222222] text-[#EEEEEE] border border-[#333333] rounded-lg shadow-xl overflow-hidden max-w-4xl w-full">
+          
+   
+          <div className="hidden lg:flex items-center justify-center bg-[#1A1A1A] p-8 border-r border-[#333333] w-1/2">
+            <img src="./images/LoginImage.png" alt="Login Illustration" className="object-contain max-h-80 opacity-90 drop-shadow-md" />
           </div>
-          <div className='flex flex-col items-start w-80 sm:w-120 gap-3 rounded-r-md p-4 '>
-            <div className='flex justify-between items-center w-full border-b border-gray-400 pb-1 text-lg font-bold'>
-              <p>Login To <span className='text-orange-600 text-xl font-bold'>Quzz</span></p>
+
+   
+          <div className="flex flex-col w-full lg:w-1/2 p-6 sm:p-10 gap-6">
+            
+            <div className="flex justify-between items-center w-full border-b border-[#333333] pb-4">
+              <h1 className="text-2xl font-semibold">
+                Login To <span className="text-[#DE5833] font-bold">Quzz</span>
+              </h1>
             </div>
-            <div className='flex flex-col gap-5 w-full'>
-              <div className='flex flex-col items-start text-lg font-semibold'>
-                <form className='w-full'>
-                <label htmlFor="email">Email</label>
-                <input type="text" placeholder="Email" className='border outline-none p-1 rounded-sm bg-white/90 w-full text-black' id="email" autoComplete='norefere' onChange={(e)=>{handleEditData("email" , e);verify("email" , e)}} onFocus={(e)=>verify("email" ,e)}/>
-                {verificationDetails.email == false && <p className='flex items-center  text-red-600 text-sm font-bold gap-1 flex-row-reverse'>
-                    <span>Email ID Required</span>
-                    <span><TriangleAlert size={16}/></span>
-                  </p>}
-                {verificationDetails.email == true &&<p className='flex items-center  text-green-600 text-sm font-bold gap-1 flex-row-reverse'>
-                    <span>Email ID Required</span>
-                    <span><CircleCheck size={16}/></span>
-                  </p>}
-                </form>
-              </div>
-              <div className='flex flex-col items-start text-lg font-semibold'>
-                <label htmlFor="password">Password</label>
-                <form className='w-full'>
-                <div className='flex justify-between items-center border rounded-sm bg-white/90 w-full p-1 text-black'>
-                  <input type={eyeStatus ? "text" : "password"} placeholder="Password" className=' outline-none' id="password" autoComplete='norefere' onChange={(e)=>{handleEditData("password" , e);verify("password" ,e)}} onFocus={(e)=>verify("password" ,e)}/>
-                  {!eyeStatus && <span className='cursor-pointer' onClick={() => setEyeStatus(!eyeStatus)}><Eye /></span>}
-                  {eyeStatus && <span className='cursor-pointer' onClick={() => setEyeStatus(!eyeStatus)}><EyeOff /></span>}
+
+            <div className="flex flex-col gap-5 w-full">
+              
+      
+              <div className="flex flex-col items-start gap-1.5 w-full">
+                <label htmlFor="email" className="text-sm font-medium text-[#AAAAAA]">Email Address</label>
+                <div className="relative w-full">
+                  <input 
+                    type="email" 
+                    placeholder="Enter your email" 
+                    className={inputStyles} 
+                    id="email" 
+                    autoComplete="email" 
+                    onChange={(e) => { handleEditData("email", e); verify("email", e); }} 
+                    onFocus={(e) => verify("email", e)}
+                  />
+                  {verificationDetails.email === true && (
+                    <CircleCheck size={18} className="absolute right-3 top-3 text-green-500" />
+                  )}
                 </div>
-                {verificationDetails.password == false && <span className='text-red-600 flex items-center gap-1 flex-row-reverse'>
-                    <span>Plz, Enter the Password</span>
-                    <span><TriangleAlert size={16}/></span>
-                  </span>}
-                  {verificationDetails.password == true && <span className='text-green-600 flex items-center gap-1 flex-row-reverse'>
-                    <span>Plz, Enter the Password</span>
-                    <span><CircleCheck size={16}/></span>
-                  </span>}
-                </form>
+                {verificationDetails.email === false && (
+                  <p className="flex items-center text-[#EF4444] text-xs font-medium gap-1 mt-1">
+                    <TriangleAlert size={14} />
+                    <span>Email ID is required</span>
+                  </p>
+                )}
               </div>
-              <div className={`w-full p-2 text-center text-lg bg-orange-600 text-white rounded-sm  hover:bg-orange-500 ${isLoading ? "opacity-40  cursor-not-allowed" : "cursor-pointer"}`} onClick={handleSubmitData} disabled={isLoading}>
-                {isLoading && <span className="flex items-center justify-center gap-2">
-                  <span><Loader/></span>
-                  <span>Verifiying...</span>
-                </span>}
-                {!isLoading && <span>
-                  Verifiy
-                </span>}
-                  
+
+         
+              <div className="flex flex-col items-start gap-1.5 w-full">
+                <label htmlFor="password" className="text-sm font-medium text-[#AAAAAA]">Password</label>
+                <div className="relative w-full">
+                  <input 
+                    type={eyeStatus ? "text" : "password"} 
+                    placeholder="Enter your password" 
+                    className={`${inputStyles} pr-10`} 
+                    id="password" 
+                    autoComplete="current-password" 
+                    onChange={(e) => { handleEditData("password", e); verify("password", e); }} 
+                    onFocus={(e) => verify("password", e)}
+                  />
+                  <button 
+                    type="button"
+                    className="absolute right-3 top-2.5 text-[#888888] hover:text-[#EEEEEE] transition-colors"
+                    onClick={() => setEyeStatus(!eyeStatus)}
+                  >
+                    {eyeStatus ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                {verificationDetails.password === false && (
+                  <p className="flex items-center text-[#EF4444] text-xs font-medium gap-1 mt-1">
+                    <TriangleAlert size={14} />
+                    <span>Password is required</span>
+                  </p>
+                )}
               </div>
-              <div className='flex items-end flex-col-reverse justify-between text-lg p-1'>
-                <Link to="/"className='underline font-bold cursor-pointer text-lg flex gap-1 items-end hover:text-[#e16c6c] underline text-[#A5B4FC]'>
-                  <span><ArrowLeftToLine /></span>
+
+        
+              <button 
+                className={`w-full py-2.5 mt-2 flex items-center justify-center text-base font-medium bg-[#DE5833] text-white rounded-md transition-colors shadow-sm ${isLoading ? "opacity-70 cursor-not-allowed" : "hover:bg-[#c94f2e] cursor-pointer"}`} 
+                onClick={handleSubmitData} 
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    <Loader type="small" />
+                    <span>Verifying...</span>
+                  </span>
+                ) : (
+                  <span>Sign In</span>
+                )}
+              </button>
+
+              <div className="flex flex-col sm:flex-row items-center justify-between text-sm pt-4 border-t border-[#333333] mt-2 gap-4">
+                <Link to="/" className="flex items-center gap-1 text-[#AAAAAA] hover:text-[#EEEEEE] transition-colors font-medium">
+                  <ArrowLeftToLine size={16} />
                   <span>Back to Home</span>
                 </Link>
-                <div className=''>
-                  <span>Do Not have Account? </span><Link to="/register" className="hover:text-[#e16c6c] underline text-[#A5B4FC] cursor-pointer font-bold">Register Now</Link>
+                <div className="text-[#888888]">
+                  <span>New here? </span>
+                  <Link to="/register" className="text-[#DE5833] hover:underline font-semibold ml-1">
+                    Create an account
+                  </Link>
                 </div>
-
               </div>
 
             </div>
           </div>
         </div>
-
       </div>
-
-
-
     </>
-  )
+  );
 }

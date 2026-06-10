@@ -1,49 +1,46 @@
-import { useEffect, useState } from "react"
-import { getQuizzList, removeQuizz, updateOneQuizz } from "../api/quizzApi"
+import { useEffect, useState } from "react";
+import { getQuizzList, removeQuizz, updateOneQuizz } from "../api/quizzApi";
 import Loader from "./Loader";
-import { toast } from 'react-toastify'
-import { ChevronDown, ChevronUp, Copy, Eye, EyeOff, Forward, Pencil, Trash, X } from 'lucide-react';
+import { toast } from 'react-toastify';
+import { ChevronDown, ChevronUp, Copy, Eye, EyeOff, Forward, Pencil, Trash2, X, Settings, Calendar, User, Link as LinkIcon, AlertCircle } from 'lucide-react';
 import PreviewQuzz from "./PreviewQuzz";
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate, useOutletContext, Link } from 'react-router-dom';
 import { getSettings } from "../api/settingApi";
 import PreviewSettings from "./PreviewSettings";
-import { Link } from "react-router-dom";
+
 export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen }) {
-  const { setIsStop } = useOutletContext()
+  const { setIsStop } = useOutletContext();
   const navigate = useNavigate();
+  
   const defaultLoading = {
     data: false,
-    edit: {
-      index: undefined,
-      status: undefined
-    },
-    delete: {
-      index: undefined,
-      status: undefined
-    }
-  }
+    edit: { index: undefined, status: undefined },
+    delete: { index: undefined, status: undefined }
+  };
+  
   const [details, setDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(defaultLoading);
+  
   const defaultData = {
     id: undefined,
     view: false,
     password: "",
-    link: {
-      status: false,
-      address: ""
-    },
+    link: { status: false, address: "" },
     name: "",
     setting: undefined,
     eye: false
-  }
+  };
+  
   const [viewDetails, setViewDetails] = useState([]);
 
   useEffect(() => {
     getQuestionsList();
-  }, [])
+  }, []);
+
   const getQuestionsList = async () => {
     setIsLoading({ ...defaultLoading, data: true });
     const id = localStorage.getItem("id");
+    
     if (id !== null) {
       const response = await getQuizzList(id);
       if (response.data) {
@@ -52,17 +49,16 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
           return {
             ...defaultData,
             id: curr._id,
-            name: curr.name !== "" ? curr.name : `Quizz${index + 1}`,
-            lastName: curr.name !== "" ? curr.name : `Quizz${index + 1}`,
+            name: curr.name !== "" ? curr.name : `Quiz ${index + 1}`,
+            lastName: curr.name !== "" ? curr.name : `Quiz ${index + 1}`,
             password: curr.password !== "" ? curr.password : "",
             link: curr.link
-          }
+          };
         });
-        const updatedViewDetails = []
+        
+        const updatedViewDetails = [];
         for (let i = 0; i < viewData.length; i++) {
-          const obj = {
-            ...viewData[i]
-          }
+          const obj = { ...viewData[i] };
           if (response.data[i].settings) {
             const response2 = await getSettings(response.data[i].settings);
             if (response2.data) {
@@ -81,23 +77,20 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
       }
     }
     setIsLoading({ ...defaultLoading, data: false });
-  }
-
+  };
 
   const handleNameChange = (e, index) => {
     const data = [...viewDetails];
     data[index].name = e.target.value;
     setViewDetails(data);
-  }
+  };
+
   const handleUpdateName = async (index) => {
     const data = [...viewDetails];
-    // console.log(data.name);
     if (data[index].name?.trim() === '' || data[index].name === data[index].lastName) {
       return;
     } else {
       const response = await updateOneQuizz(details[index]._id, "name", data[index].name.trim());
-      // console.log(response);
-
       if (response.id === null) {
         toast.error(response.message);
       } else {
@@ -105,38 +98,37 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
         setViewDetails(data);
       }
     }
-  }
+  };
+
   const handleViewChange = (index, value) => {
     const data = [...viewDetails];
     for (let i = 0; i < viewDetails.length; i++) data[i].view = false;
     data[index].view = value;
     data[index].eye = false;
     setViewDetails(data);
-  }
+  };
 
   const handleEditClick = async (index) => {
     localStorage.removeItem('urlDataManual');
     localStorage.removeItem('edit');
-    navigate(`/create/edit/${details[index]._id}`)
-  }
+    navigate(`/create/edit/${details[index]._id}`);
+  };
+
   const handleDeleteClick = async (index) => {
     setIsStop(false);
     setIsLoading({ ...defaultLoading, delete: { index, status: true } });
-    setIsPopUpOpen({
-      ...defaultPopUp, delete: {
-        index: undefined, status: false
-      }
-    })
+    setIsPopUpOpen({ ...defaultPopUp, delete: { index: undefined, status: false } });
+    
     const response = await removeQuizz(details[index]._id);
     if (response.id) {
       toast.success(response.message);
     } else {
       toast.error(response.message);
     }
+    
     setIsLoading({ ...defaultLoading, delete: { index, status: false } });
     getQuestionsList();
-
-  }
+  };
 
   const handleEyeClick = (index, value) => {
     const data = [...viewDetails];
@@ -144,237 +136,297 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
     data[index].view = false;
     data[index].eye = value;
     setViewDetails(data);
-  }
+  };
 
   const checkLink = (index) => {
     if (!viewDetails[index].link.status) {
       setIsStop(true);
       setIsPopUpOpen({ ...defaultPopUp, link: { index, status: true } });
       return false;
-    } else {
-      return true;
     }
-  }
+    return true;
+  };
 
   const handleShareClick = (index) => {
-    const verify = checkLink(index);
-    if (!verify) {
-      return;
-    } else {
+    if (checkLink(index)) {
       setIsStop(true);
-      setIsPopUpOpen({...defaultPopUp , share: {
-        index: index,
-        status: true
-      }});
+      setIsPopUpOpen({ ...defaultPopUp, share: { index: index, status: true } });
     }
-  }
+  };
 
   const handleTakeQuizz = (index) => {
-    const verify = checkLink(index);
-    if (!verify) {
-      return;
-    } else {
+    if (checkLink(index)) {
       setIsStop(false);
       navigate(details[index].link.address);
     }
-  }
+  };
 
   const handleUpdateSecuity = (index) => {
-    // console.log(details[index]);
-    const sendingData = details[index].questions.map((question) => {
-      return {
-        question: question.question,
-        type: question.type,
-        options: question.options,
-      }
-    });
-    const sendingObj = { user: localStorage.getItem("id"), questions: [...sendingData] }
+    const sendingData = details[index].questions.map((question) => ({
+      question: question.question,
+      type: question.type,
+      options: question.options,
+    }));
+    const sendingObj = { user: localStorage.getItem("id"), questions: [...sendingData] };
     localStorage.setItem('urlDataManual', JSON.stringify(sendingObj));
     localStorage.removeItem('security');
+    
     const settingId = details[index].settings;
-    let quizzId = details[index]._id;
-    // console.log(settingId, quizzId);
+    const quizzId = details[index]._id;
+    
     setIsStop(false);
     if (settingId) {
       navigate(`/create/security/edit/${quizzId}/${settingId}`);
     } else {
       navigate(`/create/security/add/${quizzId}`);
     }
-  }
+  };
 
   const handleCopyClick = async (value) => {
     try {
       await navigator.clipboard.writeText(value);
-      toast.info("Message Copied to ClipBoard");
+      toast.success("Link Copied to Clipboard");
     } catch (err) {
-      toast.info("Failed to Copy Message");
+      toast.error("Failed to Copy Link");
     }
-  }
+  };
+
   const isTrues = (index) => {
-    return (isLoading.edit.status && isLoading.edit.index === index) || (isLoading.delete.status && isLoading.delete.index === index)
-  }
+    return (isLoading.edit.status && isLoading.edit.index === index) || 
+           (isLoading.delete.status && isLoading.delete.index === index);
+  };
+
+ 
+  const primaryBtn = "flex items-center gap-1.5 px-4 py-2 rounded-md font-medium bg-[#DE5833] text-white hover:bg-[#c94f2e] transition-colors shadow-sm cursor-pointer";
+  const secondaryBtn = "flex items-center gap-1.5 px-4 py-2 rounded-md font-medium bg-[#333] border border-[#444] text-[#EEE] hover:bg-[#444] transition-colors shadow-sm cursor-pointer";
 
   return (
     <>
-      <div className={`flex items-start w-full flex-col gap-3 mt-5 relative ${(isPopUpOpen.delete.status || isPopUpOpen.link.status || isPopUpOpen.share.status) ? "opacity-50" : ""}`}>
-        <h1 className="text-2xl font-bold text-[#ffffff]">List of Quizzes</h1>
-        {
-          isLoading.data && <div className="flex w-full items-center justify-center"><Loader type="big" /></div>
-        }
-        {
-          !isLoading.data && details &&
-          details.map((currQuizz, index) => {
-            return (
-              <div key={index} className="flex flex-col items-end w-full">
-                <div className="w-max p-1 border border-gray-200 border-b-0 rounded-sm font-semibold rounded-b-none bg-[#7C3AED] text-white hover:bg-[#6D28D9] cursor-pointer">
-                  <span>Created on: {currQuizz.created_on.day}</span>
-                </div>
-                <div className="w-full flex items-center justify-between p-2 border rounded-md rounded-b-none rounded-tr-none">
-                  <div className="flex items-center gap-1">
-                    <p className="text-xl">{index + 1}.</p>
-                    <input type="text" value={viewDetails[index].name} onChange={(e) => handleNameChange(e, index)} className="text-md sm:text-xl text-[#ff9100] outline-none border-b border-white" onBlur={() => handleUpdateName(index)} />
-                  </div>
-                  <p className="hidden sm:flex text-md">by {currQuizz.user.name}</p>
+      <div className={`flex flex-col items-start w-full gap-4 mt-6 transition-opacity duration-200 ${(isPopUpOpen.delete.status || isPopUpOpen.link.status || isPopUpOpen.share.status) ? "opacity-40 pointer-events-none" : ""}`}>
+        
+        {isLoading.data ? (
+          <div className="flex w-full items-center justify-center py-20"><Loader type="big" /></div>
+        ) : (
+          details && details.map((currQuizz, index) => (
+            <div key={index} className="flex flex-col w-full bg-[#222222] border border-[#333333] rounded-lg shadow-sm overflow-hidden mb-2">
+              
+
+              <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-[#1A1A1A] gap-4">
+                
+                <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
-                    <span className={`flex items-center gap-1 text-orange-600  ${isTrues(index) ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`} onClick={() => handleEditClick(index)} >{(isLoading.edit.status && isLoading.edit.index === index) && <span><Loader type="very small" /></span>}
-                      <span><Pencil size={20} /></span></span>
-                    <span className={`flex items-center gap-1 text-red-600  ${isTrues() ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`} onClick={() => {
-                      setIsPopUpOpen({
-                        ...defaultPopUp, delete: {
-                          index: index, status: true
-                        }
-                      }); setIsStop(true)
-                    }}>
-                      {(isLoading.delete.status && isLoading.delete.index === index) && <span><Loader type="very small" /></span>}
-                      <span><Trash size={20} /></span>
-                    </span>
-                    <div className="cursor-pointer" onClick={(e) => handleEyeClick(index, !viewDetails[index].eye)}>
-                      {!viewDetails[index].eye && <span><Eye size={20} /></span>}
-                      {viewDetails[index].eye && <span><EyeOff size={20} /></span>}
-                    </div>
-                    <div>
-                      {viewDetails[index].view === false && <div className="cursor-pointer" onClick={() => handleViewChange(index, !viewDetails[index].view)}><ChevronDown size={24} /></div>}
-                      {viewDetails[index].view === true && <div className="cursor-pointer" onClick={() => handleViewChange(index, !viewDetails[index].view)}><ChevronUp size={24} /></div>}
-                    </div>
-
+                    <span className="text-[#888888] font-medium text-lg">{index + 1}.</span>
+                    <input 
+                      type="text" 
+                      value={viewDetails[index].name} 
+                      onChange={(e) => handleNameChange(e, index)} 
+                      onBlur={() => handleUpdateName(index)}
+                      className="text-lg font-medium text-[#EEEEEE] bg-transparent border-b border-transparent hover:border-[#444] focus:border-[#DE5833] outline-none transition-colors px-1" 
+                    />
                   </div>
-
+                  <div className="flex items-center gap-4 text-xs text-[#888888] px-6">
+                    <span className="flex items-center gap-1"><User size={12} /> {currQuizz.user.name}</span>
+                    <span className="flex items-center gap-1"><Calendar size={12} /> {currQuizz.created_on.day}</span>
+                  </div>
                 </div>
-                {viewDetails[index].view && <div className="w-full h-80 border border-t-0 overflow-y-auto">
-                  <PreviewQuzz data={currQuizz} />
-                </div>}
-                {viewDetails[index].eye && <div className="w-full h-80 border border-t-0 overflow-y-auto">
-                  <PreviewSettings data={viewDetails[index]} />
-                </div>}
-                <div className="w-full justify-end flex gap-2 text-[12px] sm:text-[16px]">
-                  <div className="w-max p-1 border border-gray-200 border-t-0 rounded-sm font-semibold rounded-t-none bg-[#266e0e] text-white hover:bg-[#468346] cursor-pointer" onClick={() => handleTakeQuizz(index)}>Take Quizze</div>
-                  <div className="w-max flex items-center gap-1 p-1 border border-gray-200 border-t-0 rounded-sm font-semibold rounded-t-none bg-[#e49a24] text-white hover:bg-[#e8b547] cursor-pointer" onClick={() => handleShareClick(index)}>
-                    <span><Forward size={20} /></span>
-                    <span>share</span>
-                  </div>
+
+           
+                <div className="flex items-center gap-3 sm:gap-4 px-6 sm:px-0">
+                  <button 
+                    className={`flex items-center justify-center p-1.5 text-[#AAAAAA] hover:text-[#EEEEEE] hover:bg-[#333] rounded transition-colors ${isTrues(index) ? "opacity-50 cursor-not-allowed" : ""}`} 
+                    onClick={() => handleEditClick(index)}
+                    title="Edit Quiz"
+                  >
+                    {(isLoading.edit.status && isLoading.edit.index === index) ? <Loader type="very small" /> : <Pencil size={18} />}
+                  </button>
+                  
+                  <button 
+                    className={`flex items-center justify-center p-1.5 text-[#AAAAAA] hover:text-[#EF4444] hover:bg-[#333] rounded transition-colors ${isTrues(index) ? "opacity-50 cursor-not-allowed" : ""}`} 
+                    onClick={() => { setIsPopUpOpen({ ...defaultPopUp, delete: { index: index, status: true } }); setIsStop(true); }}
+                    title="Delete Quiz"
+                  >
+                    {(isLoading.delete.status && isLoading.delete.index === index) ? <Loader type="very small" /> : <Trash2 size={18} />}
+                  </button>
+                  
+                  <div className="h-4 w-px bg-[#444]"></div>
+
+                  <button 
+                    className={`flex items-center justify-center p-1.5 rounded transition-colors ${viewDetails[index].eye ? "text-[#DE5833] bg-[#DE5833]/10" : "text-[#AAAAAA] hover:text-[#EEEEEE] hover:bg-[#333]"}`} 
+                    onClick={() => handleEyeClick(index, !viewDetails[index].eye)}
+                    title="Preview Settings"
+                  >
+                    <Settings size={18} />
+                  </button>
+
+                  <button 
+                    className={`flex items-center justify-center p-1.5 rounded transition-colors ${viewDetails[index].view ? "text-[#DE5833] bg-[#DE5833]/10" : "text-[#AAAAAA] hover:text-[#EEEEEE] hover:bg-[#333]"}`} 
+                    onClick={() => handleViewChange(index, !viewDetails[index].view)}
+                    title="Preview Quiz Questions"
+                  >
+                    {viewDetails[index].view ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
                 </div>
               </div>
-            )
-          })
-        }
+
+    
+              {viewDetails[index].view && (
+                <div className="w-full h-80 border-t border-[#333333] overflow-y-auto bg-[#111111] p-4">
+                  <PreviewQuzz data={currQuizz} />
+                </div>
+              )}
+              {viewDetails[index].eye && (
+                <div className="w-full h-80 border-t border-[#333333] overflow-y-auto bg-[#111111] p-4">
+                  <PreviewSettings data={viewDetails[index]} />
+                </div>
+              )}
+
+         
+              <div className="w-full flex items-center justify-end gap-3 p-3 bg-[#1A1A1A] border-t border-[#333333]">
+                <button className={secondaryBtn} onClick={() => handleShareClick(index)}>
+                  <Forward size={16} />
+                  <span>Share</span>
+                </button>
+                <button className={primaryBtn} onClick={() => handleTakeQuizz(index)}>
+                  <LinkIcon size={16} />
+                  <span>Take Quiz</span>
+                </button>
+              </div>
+
+            </div>
+          ))
+        )}
       </div>
-      {isPopUpOpen.delete.status && <div className="absolute z-10 top-50 flex items-center justify-center w-full">
-        <div className="">
-          <div className="flex items-start flex-col gap-1 max-w-90 text-white p-1 border rounded-md px-2 bg-[#0B1020]">
-            <div className="flex items-center justify-between w-full border-b">
-              <span className="text-orange-600 text-lg">Danger Operation</span>
-              <span className="cursor-pointer" onClick={() => {
-                setIsPopUpOpen({
-                  ...defaultPopUp, delete: {
-                    index: undefined, status: false
-                  }
-                }); setIsStop(false)
-              }}><X size={20} /></span>
+
+
+      {isPopUpOpen.delete.status && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="flex flex-col gap-4 w-full max-w-md text-[#EEEEEE] p-6 border border-[#444] rounded-lg bg-[#222] shadow-xl">
+            <div className="flex items-center justify-between w-full border-b border-[#444] pb-3">
+              <div className="flex items-center gap-2 text-[#EF4444]">
+                <AlertCircle size={20} />
+                <span className="font-semibold text-lg">Confirm Deletion</span>
+              </div>
+              <button className="text-[#AAAAAA] hover:text-white transition-colors" onClick={() => { setIsPopUpOpen({ ...defaultPopUp, delete: { index: undefined, status: false } }); setIsStop(false); }}>
+                <X size={20} />
+              </button>
             </div>
-            <div className="py-3">You are Deleting the Quizz <span className="text-red-600 font-extrabold"><i>"{viewDetails[isPopUpOpen.delete.index].name}"</i></span>, There is no Undo Operation, Make Sure You Verified Before Deletion.
+            
+            <div className="py-2 text-sm text-[#CCCCCC] leading-relaxed">
+              You are about to delete <span className="text-[#EEEEEE] font-bold">"{viewDetails[isPopUpOpen.delete.index].name}"</span>. This action cannot be undone. Are you sure you want to proceed?
             </div>
-            <div className="flex items-center justify-between w-full">
-              <button className="flex items-center justify-center p-1 cursor-pointer transition border borde-gray-200 rounded-sm font-semibold bg-[#838186] text-white hover:bg-[#8d8d8e]" onClick={() => {
-                setIsPopUpOpen({
-                  ...defaultPopUp, delete: {
-                    index: undefined, status: false
-                  }
-                }); setIsStop(false)
-              }}>Cancel</button>
-              <label className="flex items-center justify-center p-1 cursor-pointer transition border borde-gray-200 rounded-sm font-semibold bg-[#ff0000] text-white hover:bg-[#ab2424]">
-                <span className="flex items-center gap-1" onClick={() => handleDeleteClick(isPopUpOpen.delete.index)}>Delete</span>
-              </label>
+            
+            <div className="flex items-center justify-end gap-3 w-full pt-2">
+              <button 
+                className="px-4 py-2 rounded-md font-medium bg-transparent text-[#AAAAAA] hover:text-white hover:bg-[#333] transition-colors"
+                onClick={() => { setIsPopUpOpen({ ...defaultPopUp, delete: { index: undefined, status: false } }); setIsStop(false); }}
+              >
+                Cancel
+              </button>
+              <button 
+                className="flex items-center justify-center gap-2 px-5 py-2 rounded-md font-medium bg-[#EF4444] text-white hover:bg-[#DC2626] transition-colors shadow-sm"
+                onClick={() => handleDeleteClick(isPopUpOpen.delete.index)}
+              >
+                Delete Quiz
+              </button>
             </div>
           </div>
         </div>
-      </div>}
-      {isPopUpOpen.link.status && <div className="absolute z-10 top-50 flex items-center justify-center w-full">
-        <div className="">
-          <div className="flex items-start flex-col gap-1 max-w-90 text-white p-1 border rounded-md px-2 bg-[#0B1020]">
-            <div className="flex items-center justify-between w-full border-b">
-              <span className="text-orange-600 text-lg">Information</span>
-              <span className="cursor-pointer" onClick={() => {
-                setIsPopUpOpen({
-                  ...defaultPopUp, link: {
-                    index: undefined, status: false
-                  }
-                }); setIsStop(false)
-              }}><X size={20} /></span>
-            </div>
-            <div className="py-3">You Did Not Completed the Security Details Update it. To continue to Share/Take Test.
-            </div>
-            <div className="flex items-center justify-between w-full">
-              <button className="flex items-center justify-center p-1 cursor-pointer transition border borde-gray-200 rounded-sm font-semibold bg-[#838186] text-white hover:bg-[#8d8d8e]" onClick={() => {
-                setIsPopUpOpen({
-                  ...defaultPopUp, link: {
-                    index: undefined, status: false
-                  }
-                }); setIsStop(false)
-              }}>Cancel</button>
-              <label className="flex items-center justify-center p-1 cursor-pointer transition border borde-gray-200 rounded-sm font-semibold bg-[#1a792f] text-white hover:bg-[#136b1d]" onClick={() => handleUpdateSecuity(isPopUpOpen.link.index)} >
-                <span className="flex items-center gap-1">Update Details</span>
+      )}
 
-              </label>
+
+      {isPopUpOpen.link.status && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="flex flex-col gap-4 w-full max-w-md text-[#EEEEEE] p-6 border border-[#444] rounded-lg bg-[#222] shadow-xl">
+            <div className="flex items-center justify-between w-full border-b border-[#444] pb-3">
+              <div className="flex items-center gap-2 text-[#DE5833]">
+                <Settings size={20} />
+                <span className="font-semibold text-lg">Action Required</span>
+              </div>
+              <button className="text-[#AAAAAA] hover:text-white transition-colors" onClick={() => { setIsPopUpOpen({ ...defaultPopUp, link: { index: undefined, status: false } }); setIsStop(false); }}>
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="py-2 text-sm text-[#CCCCCC] leading-relaxed">
+              Security settings for this quiz are incomplete. You must update them before you can share or take the test.
+            </div>
+            
+            <div className="flex items-center justify-end gap-3 w-full pt-2">
+              <button 
+                className="px-4 py-2 rounded-md font-medium bg-transparent text-[#AAAAAA] hover:text-white hover:bg-[#333] transition-colors"
+                onClick={() => { setIsPopUpOpen({ ...defaultPopUp, link: { index: undefined, status: false } }); setIsStop(false); }}
+              >
+                Cancel
+              </button>
+              <button 
+                className="flex items-center justify-center gap-2 px-5 py-2 rounded-md font-medium bg-[#DE5833] text-white hover:bg-[#c94f2e] transition-colors shadow-sm"
+                onClick={() => handleUpdateSecuity(isPopUpOpen.link.index)}
+              >
+                Update Settings
+              </button>
             </div>
           </div>
         </div>
-      </div>}
-      {isPopUpOpen.share.status && <div className="absolute z-10 top-50 flex items-center justify-center w-full">
-        <div className="">
-          <div className="flex items-start flex-col gap-1 max-w-90 text-white p-1 border rounded-md px-2 bg-[#0B1020]">
-            <div className="flex items-center justify-between w-full border-b">
-              <span className="text-orange-600 text-lg">Share</span>
-              <span className="cursor-pointer" onClick={() => {
-                setIsPopUpOpen({
-                  ...defaultPopUp, delete: {
-                    index: undefined, status: false
-                  }
-                }); setIsStop(false)
-              }}><X size={20} /></span>
-            </div>
-            <div className="py-3"><div className="flex items-center flex-wrap gap-2 w-full">
-              {viewDetails[isPopUpOpen.share.index].link.status && <><div className="flex  items-center text-sm text-orange-500 border border-gray-500 rounded-md p-1 bg-gray-600/50 wrap-break-words whitespace-normal underline"><Link to={viewDetails[isPopUpOpen.share.index].link.address} target="_blank">{viewDetails[isPopUpOpen.share.index].link.address.substring(0,40)}...</Link></div>
-                <span className="cursor-pointer wrap-break-word whitespace-normal w-10" onClick={() => handleCopyClick(viewDetails[isPopUpOpen.share.index].link.address)}><Copy size={18} /></span></>
-              }
-              {!viewDetails[isPopUpOpen.share.index].link.status && <div className="flex  items-center text-lg text-orange-500 border border-gray-500 rounded-md p-1 bg-gray-600/50 wrap-break-words whitespace-normal">To Active the Link,Click on the Pencil Icon.</div>}
-              <div className={`w-3 h-3 rounded-md ${viewDetails[isPopUpOpen.share.index].link.status ? "bg-green-600" : "bg-red-600"}`} title={viewDetails[isPopUpOpen.share.index].link.status ? "Link is Active" : "Link No Active"}></div>
+      )}
 
-            </div>
-            </div>
-            <div className="flex items-center justify-between w-full">
-              <button className="flex items-center justify-center p-1 cursor-pointer transition border borde-gray-200 rounded-sm font-semibold bg-[#838186] text-white hover:bg-[#8d8d8e]" onClick={() => {
-                setIsPopUpOpen({
-                  ...defaultPopUp, delete: {
-                    index: undefined, status: false
-                  }
-                }); setIsStop(false)
-              }}>Close</button>
 
+      {isPopUpOpen.share.status && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="flex flex-col gap-4 w-full max-w-md text-[#EEEEEE] p-6 border border-[#444] rounded-lg bg-[#222] shadow-xl">
+            <div className="flex items-center justify-between w-full border-b border-[#444] pb-3">
+              <div className="flex items-center gap-2 text-[#EEEEEE]">
+                <Forward size={20} />
+                <span className="font-semibold text-lg">Share Quiz</span>
+              </div>
+              <button className="text-[#AAAAAA] hover:text-white transition-colors" onClick={() => { setIsPopUpOpen({ ...defaultPopUp, share: { index: undefined, status: false } }); setIsStop(false); }}>
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="py-2">
+              {viewDetails[isPopUpOpen.share.index].link.status ? (
+                <div className="flex flex-col gap-2 w-full">
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-sm font-medium text-[#AAAAAA]">Direct Link</span>
+                    <div className="flex items-center gap-1.5 text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> Active
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 w-full">
+                    <div className="flex-1 bg-[#1A1A1A] border border-[#444] rounded-md p-2.5 text-sm text-[#EEEEEE] truncate">
+                      {viewDetails[isPopUpOpen.share.index].link.address}
+                    </div>
+                    <button 
+                      className="p-2.5 bg-[#333] hover:bg-[#444] border border-[#444] rounded-md text-[#EEEEEE] transition-colors"
+                      onClick={() => handleCopyClick(viewDetails[isPopUpOpen.share.index].link.address)}
+                      title="Copy to clipboard"
+                    >
+                      <Copy size={18} />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center p-4 bg-[#1A1A1A] border border-[#444] rounded-md gap-2 text-center">
+                  <div className="flex items-center gap-1.5 text-xs text-[#EF4444] bg-[#EF4444]/10 px-2 py-0.5 rounded-full border border-[#EF4444]/20 mb-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#EF4444]"></div> Inactive
+                  </div>
+                  <p className="text-sm text-[#CCCCCC]">This link is currently inactive. Click the edit (pencil) icon to activate it.</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex items-center justify-end w-full pt-2">
+              <button 
+                className="px-5 py-2 rounded-md font-medium bg-[#333] border border-[#444] text-[#EEEEEE] hover:bg-[#444] transition-colors"
+                onClick={() => { setIsPopUpOpen({ ...defaultPopUp, share: { index: undefined, status: false } }); setIsStop(false); }}
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
-      </div>}
+      )}
 
     </>
-  )
+  );
 }

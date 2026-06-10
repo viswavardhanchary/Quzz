@@ -8,13 +8,15 @@ const [fileRouter] = require('./routers/file');
 const [settingRouter] = require('./routers/setting');
 const [testRouter] = require('./routers/test');
 const [createUserIndex] =  require('./config/database.index'); 
+const [redisClient] = require('./config/redisClient');
 
 dotenv.config();
 const app = express();
 connectDB();
 createUserIndex();
 app.use(cors({
-  origin: ['https://make-quzz.onrender.com']
+  // origin: ['https://make-quzz.onrender.com']
+  origin : ['http://localhost:5173']
 }));
 
 app.use(express.json());

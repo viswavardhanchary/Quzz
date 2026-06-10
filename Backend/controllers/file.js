@@ -1,11 +1,17 @@
 const [processExcel] = require('./processExcel');
 
-
 const uploadFile = async (req, res) => {
   try {
-    const quizData = await processExcel(req.file.path , req.params.id);
+    if (!req.file) {
+      return res.status(400).send({
+        message: "No file was uploaded",
+        data: null
+      });
+    }
+
+    const quizData = await processExcel(req.file.path, req.params.id);
     res.status(200).send({
-      message: "File Uploaded SucessFully",
+      message: "File Uploaded Successfully",
       data: quizData
     });
   } catch (err) {
@@ -15,7 +21,6 @@ const uploadFile = async (req, res) => {
       data: null
     });
   }
-
-}
+};
 
 module.exports = [uploadFile];
