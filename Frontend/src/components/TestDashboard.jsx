@@ -11,12 +11,12 @@ export default function TestDashboard() {
   const location = useLocation();
   const path = location.pathname.split("/");
   const quizzId = path[path.length - 1];
-  
+
   const defaultLoading = {
     data: false,
     submit: false
   };
-  
+
   const [details, setDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(defaultLoading);
   const [loginPopUp, setLoginPopUp] = useState(false);
@@ -48,7 +48,7 @@ export default function TestDashboard() {
       if (response.data) {
         const updatedData = response.data.map((data) => {
           return {
-            ...data, 
+            ...data,
             user: { name: data.user.name, id: data.user._id }
           };
         });
@@ -65,8 +65,8 @@ export default function TestDashboard() {
   return (
     <>
       <div className="flex flex-col items-start gap-6 w-full max-w-5xl mx-auto p-4 pt-6 text-[#EEEEEE]">
-        
-   
+
+
         {!loginPopUp && !isLoading.data && details && (
           <div className="flex items-center gap-3 border-b border-[#333333] pb-4 w-full">
             <Trophy className="text-[#DE5833]" size={24} />
@@ -77,7 +77,7 @@ export default function TestDashboard() {
           </div>
         )}
 
-    
+
         {!loginPopUp && !isLoading.data && details && details.length > 0 && (
           <div className="overflow-x-auto rounded-md border border-[#333333] w-full bg-[#222222] shadow-sm">
             <table className="w-full text-sm text-[#CCCCCC]">
@@ -110,14 +110,18 @@ export default function TestDashboard() {
                 {details.map((data, index) => {
                   const isMe = data.user.id === localStorage.getItem("id");
                   const diffMs = new Date(data.submittedAt) - new Date(data.startedAt);
-                  const minutes = (diffMs / (1000 * 60)).toFixed(2);
-                  
+
+                  const totalSeconds = Math.floor(diffMs / 1000);
+
+                  const hours = Math.floor(totalSeconds / 3600);
+                  const minutes = Math.floor((totalSeconds % 3600) / 60);
+                  const seconds = totalSeconds % 60;
+
                   return (
                     <tr
                       key={index}
-                      className={`border-b border-[#333333] last:border-0 hover:bg-[#2A2A2A] transition-colors ${
-                        isMe ? "bg-[#DE5833]/10" : ""
-                      }`}
+                      className={`border-b border-[#333333] last:border-0 hover:bg-[#2A2A2A] transition-colors ${isMe ? "bg-[#DE5833]/10" : ""
+                        }`}
                     >
                       <td className="px-5 py-4 text-left">
                         <div className="flex items-center gap-3">
@@ -143,7 +147,19 @@ export default function TestDashboard() {
                       </td>
 
                       <td className="px-5 py-4 text-center text-[#AAAAAA]">
-                        {minutes} <span className="text-xs">min</span>
+                        {hours > 0 && (
+                          <>
+                            {hours} <span className="text-xs mr-1">hr</span>
+                          </>
+                        )}
+
+                        {(minutes > 0 || hours > 0) && (
+                          <>
+                            {minutes} <span className="text-xs mr-1">min</span>
+                          </>
+                        )}
+
+                        {seconds} <span className="text-xs">sec</span>
                       </td>
 
                       <td className="px-5 py-4 text-center text-[#AAAAAA]">
@@ -161,7 +177,7 @@ export default function TestDashboard() {
           </div>
         )}
 
-   
+
         {!loginPopUp && !isLoading.data && details && details.length === 0 && (
           <div className="flex flex-col items-center justify-center w-full py-20 bg-[#222222] border border-[#333333] rounded-md gap-3 text-[#888888]">
             <Inbox size={40} className="text-[#444444]" />
@@ -170,7 +186,7 @@ export default function TestDashboard() {
           </div>
         )}
 
- 
+
         {isLoading.data && (
           <div className="flex w-full items-center justify-center py-20">
             <Loader type="big" />

@@ -1,4 +1,4 @@
-import { Eye, EyeOff, ArrowLeftToLine, TriangleAlert, CircleCheck, Check, X as XIcon } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeftToLine, TriangleAlert, CircleCheck, Check, X as XIcon, Info } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Loader from '../components/Loader';
@@ -124,15 +124,12 @@ export default function Register() {
 
   return (
     <>
-      <div className="flex items-center justify-center p-4 min-h-[calc(100vh-4rem)] bg-[#111111]">
+      <div className="flex items-center justify-center p-4 min-h-[100vh] bg-[#111111]">
         
         <div className="flex flex-col lg:flex-row items-stretch bg-[#222222] text-[#EEEEEE] border border-[#333333] rounded-lg shadow-xl overflow-hidden max-w-4xl w-full">
           
-          <div className="hidden lg:flex items-center justify-center bg-[#1A1A1A] p-8 border-r border-[#333333] w-1/2">
-            <img src="./images/LoginImage.png" alt="Registration Illustration" className="object-contain max-h-80 opacity-90 drop-shadow-md" />
-          </div>
 
-          <div className="flex flex-col w-full lg:w-1/2 p-6 sm:p-10 gap-6">
+          <div className="flex flex-col w-full p-6 sm:p-10 gap-6">
             
             <div className="flex justify-between items-center w-full border-b border-[#333333] pb-4">
               <h1 className="text-2xl font-semibold">
@@ -196,6 +193,7 @@ export default function Register() {
                     id="password" 
                     onChange={(e) => { handleEditData("password", e); verifyPassword(e.target.value); }} 
                     onFocus={(e) => verifyPassword(e.target.value)} 
+                    maxLength={12}
                   />
                   <button 
                     type="button"
@@ -204,6 +202,9 @@ export default function Register() {
                   >
                     {eyeStatus ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
+                  <p className="flex items-center text-[#EF4444] text-xs font-medium gap-1 mt-1">
+                    <Info size={14} /> <span>Maximum Length is 12</span>
+                  </p>
                 </div>
                 
                 {userDetails.password.length > 0 && verificationDetails.password !== true && (

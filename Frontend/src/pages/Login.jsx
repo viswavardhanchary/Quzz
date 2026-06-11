@@ -65,17 +65,12 @@ export default function Login() {
   return (
     <>
     
-      <div className="flex items-center justify-center p-4 min-h-[calc(100vh-4rem)] bg-[#111111]">
+      <div className="flex items-center justify-center p-4 min-h-[100vh] bg-[#111111]">
         
         <div className="flex flex-col lg:flex-row items-stretch bg-[#222222] text-[#EEEEEE] border border-[#333333] rounded-lg shadow-xl overflow-hidden max-w-4xl w-full">
           
    
-          <div className="hidden lg:flex items-center justify-center bg-[#1A1A1A] p-8 border-r border-[#333333] w-1/2">
-            <img src="./images/LoginImage.png" alt="Login Illustration" className="object-contain max-h-80 opacity-90 drop-shadow-md" />
-          </div>
-
-   
-          <div className="flex flex-col w-full lg:w-1/2 p-6 sm:p-10 gap-6">
+          <div className="flex flex-col w-full p-6 sm:p-10 gap-6">
             
             <div className="flex justify-between items-center w-full border-b border-[#333333] pb-4">
               <h1 className="text-2xl font-semibold">

@@ -15,8 +15,8 @@ const app = express();
 connectDB();
 createUserIndex();
 app.use(cors({
-  // origin: ['https://make-quzz.onrender.com']
-  origin : ['http://localhost:5173']
+  origin: ['https://make-quzz.onrender.com']
+  // origin : ['http://localhost:5173']
 }));
 
 app.use(express.json());

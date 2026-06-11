@@ -38,7 +38,6 @@ export default function TestStart() {
 
   const userId = localStorage.getItem("id") || "STUDENT";
   
-  // Upgraded watermark: better visibility on dark mode without burning the eyes
   const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="250" height="250"><text x="50%" y="50%" transform="rotate(-45 125 125)" text-anchor="middle" font-family="Arial" font-size="22" font-weight="bold" fill="rgba(255, 255, 255, 0.08)">${userId}</text></svg>`;
   const encodedSvg = btoa(unescape(encodeURIComponent(svgString))); 
   const watermarkStyle = { 

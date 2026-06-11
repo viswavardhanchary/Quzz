@@ -11,16 +11,16 @@ import PreviewSettings from "./PreviewSettings";
 export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen }) {
   const { setIsStop } = useOutletContext();
   const navigate = useNavigate();
-  
+
   const defaultLoading = {
     data: false,
     edit: { index: undefined, status: undefined },
     delete: { index: undefined, status: undefined }
   };
-  
+
   const [details, setDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(defaultLoading);
-  
+
   const defaultData = {
     id: undefined,
     view: false,
@@ -30,7 +30,7 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
     setting: undefined,
     eye: false
   };
-  
+
   const [viewDetails, setViewDetails] = useState([]);
 
   useEffect(() => {
@@ -40,7 +40,7 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
   const getQuestionsList = async () => {
     setIsLoading({ ...defaultLoading, data: true });
     const id = localStorage.getItem("id");
-    
+
     if (id !== null) {
       const response = await getQuizzList(id);
       if (response.data) {
@@ -55,7 +55,7 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
             link: curr.link
           };
         });
-        
+
         const updatedViewDetails = [];
         for (let i = 0; i < viewData.length; i++) {
           const obj = { ...viewData[i] };
@@ -118,14 +118,14 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
     setIsStop(false);
     setIsLoading({ ...defaultLoading, delete: { index, status: true } });
     setIsPopUpOpen({ ...defaultPopUp, delete: { index: undefined, status: false } });
-    
+
     const response = await removeQuizz(details[index]._id);
     if (response.id) {
       toast.success(response.message);
     } else {
       toast.error(response.message);
     }
-    
+
     setIsLoading({ ...defaultLoading, delete: { index, status: false } });
     getQuestionsList();
   };
@@ -170,10 +170,10 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
     const sendingObj = { user: localStorage.getItem("id"), questions: [...sendingData] };
     localStorage.setItem('urlDataManual', JSON.stringify(sendingObj));
     localStorage.removeItem('security');
-    
+
     const settingId = details[index].settings;
     const quizzId = details[index]._id;
-    
+
     setIsStop(false);
     if (settingId) {
       navigate(`/create/security/edit/${quizzId}/${settingId}`);
@@ -192,36 +192,36 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
   };
 
   const isTrues = (index) => {
-    return (isLoading.edit.status && isLoading.edit.index === index) || 
-           (isLoading.delete.status && isLoading.delete.index === index);
+    return (isLoading.edit.status && isLoading.edit.index === index) ||
+      (isLoading.delete.status && isLoading.delete.index === index);
   };
 
- 
+
   const primaryBtn = "flex items-center gap-1.5 px-4 py-2 rounded-md font-medium bg-[#DE5833] text-white hover:bg-[#c94f2e] transition-colors shadow-sm cursor-pointer";
   const secondaryBtn = "flex items-center gap-1.5 px-4 py-2 rounded-md font-medium bg-[#333] border border-[#444] text-[#EEE] hover:bg-[#444] transition-colors shadow-sm cursor-pointer";
 
   return (
     <>
       <div className={`flex flex-col items-start w-full gap-4 mt-6 transition-opacity duration-200 ${(isPopUpOpen.delete.status || isPopUpOpen.link.status || isPopUpOpen.share.status) ? "opacity-40 pointer-events-none" : ""}`}>
-        
+
         {isLoading.data ? (
           <div className="flex w-full items-center justify-center py-20"><Loader type="big" /></div>
         ) : (
           details && details.map((currQuizz, index) => (
             <div key={index} className="flex flex-col w-full bg-[#222222] border border-[#333333] rounded-lg shadow-sm overflow-hidden mb-2">
-              
+
 
               <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-[#1A1A1A] gap-4">
-                
+
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
                     <span className="text-[#888888] font-medium text-lg">{index + 1}.</span>
-                    <input 
-                      type="text" 
-                      value={viewDetails[index].name} 
-                      onChange={(e) => handleNameChange(e, index)} 
+                    <input
+                      type="text"
+                      value={viewDetails[index].name}
+                      onChange={(e) => handleNameChange(e, index)}
                       onBlur={() => handleUpdateName(index)}
-                      className="text-lg font-medium text-[#EEEEEE] bg-transparent border-b border-transparent hover:border-[#444] focus:border-[#DE5833] outline-none transition-colors px-1" 
+                      className="text-lg font-medium text-[#EEEEEE] bg-transparent border-b border-transparent hover:border-[#444] focus:border-[#DE5833] outline-none transition-colors px-1"
                     />
                   </div>
                   <div className="flex items-center gap-4 text-xs text-[#888888] px-6">
@@ -230,36 +230,36 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
                   </div>
                 </div>
 
-           
+
                 <div className="flex items-center gap-3 sm:gap-4 px-6 sm:px-0">
-                  <button 
-                    className={`flex items-center justify-center p-1.5 text-[#AAAAAA] hover:text-[#EEEEEE] hover:bg-[#333] rounded transition-colors ${isTrues(index) ? "opacity-50 cursor-not-allowed" : ""}`} 
+                  <button
+                    className={`flex items-center justify-center p-1.5 text-[#AAAAAA] hover:text-[#EEEEEE] hover:bg-[#333] rounded transition-colors ${isTrues(index) ? "opacity-50 cursor-not-allowed" : ""}`}
                     onClick={() => handleEditClick(index)}
                     title="Edit Quiz"
                   >
                     {(isLoading.edit.status && isLoading.edit.index === index) ? <Loader type="very small" /> : <Pencil size={18} />}
                   </button>
-                  
-                  <button 
-                    className={`flex items-center justify-center p-1.5 text-[#AAAAAA] hover:text-[#EF4444] hover:bg-[#333] rounded transition-colors ${isTrues(index) ? "opacity-50 cursor-not-allowed" : ""}`} 
+
+                  <button
+                    className={`flex items-center justify-center p-1.5 text-[#AAAAAA] hover:text-[#EF4444] hover:bg-[#333] rounded transition-colors ${isTrues(index) ? "opacity-50 cursor-not-allowed" : ""}`}
                     onClick={() => { setIsPopUpOpen({ ...defaultPopUp, delete: { index: index, status: true } }); setIsStop(true); }}
                     title="Delete Quiz"
                   >
                     {(isLoading.delete.status && isLoading.delete.index === index) ? <Loader type="very small" /> : <Trash2 size={18} />}
                   </button>
-                  
+
                   <div className="h-4 w-px bg-[#444]"></div>
 
-                  <button 
-                    className={`flex items-center justify-center p-1.5 rounded transition-colors ${viewDetails[index].eye ? "text-[#DE5833] bg-[#DE5833]/10" : "text-[#AAAAAA] hover:text-[#EEEEEE] hover:bg-[#333]"}`} 
+                  <button
+                    className={`flex items-center justify-center p-1.5 rounded transition-colors ${viewDetails[index].eye ? "text-[#DE5833] bg-[#DE5833]/10" : "text-[#AAAAAA] hover:text-[#EEEEEE] hover:bg-[#333]"}`}
                     onClick={() => handleEyeClick(index, !viewDetails[index].eye)}
                     title="Preview Settings"
                   >
                     <Settings size={18} />
                   </button>
 
-                  <button 
-                    className={`flex items-center justify-center p-1.5 rounded transition-colors ${viewDetails[index].view ? "text-[#DE5833] bg-[#DE5833]/10" : "text-[#AAAAAA] hover:text-[#EEEEEE] hover:bg-[#333]"}`} 
+                  <button
+                    className={`flex items-center justify-center p-1.5 rounded transition-colors ${viewDetails[index].view ? "text-[#DE5833] bg-[#DE5833]/10" : "text-[#AAAAAA] hover:text-[#EEEEEE] hover:bg-[#333]"}`}
                     onClick={() => handleViewChange(index, !viewDetails[index].view)}
                     title="Preview Quiz Questions"
                   >
@@ -268,7 +268,7 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
                 </div>
               </div>
 
-    
+
               {viewDetails[index].view && (
                 <div className="w-full h-80 border-t border-[#333333] overflow-y-auto bg-[#111111] p-4">
                   <PreviewQuzz data={currQuizz} />
@@ -280,7 +280,7 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
                 </div>
               )}
 
-         
+
               <div className="w-full flex items-center justify-end gap-3 p-3 bg-[#1A1A1A] border-t border-[#333333]">
                 <button className={secondaryBtn} onClick={() => handleShareClick(index)}>
                   <Forward size={16} />
@@ -310,19 +310,19 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
                 <X size={20} />
               </button>
             </div>
-            
+
             <div className="py-2 text-sm text-[#CCCCCC] leading-relaxed">
               You are about to delete <span className="text-[#EEEEEE] font-bold">"{viewDetails[isPopUpOpen.delete.index].name}"</span>. This action cannot be undone. Are you sure you want to proceed?
             </div>
-            
+
             <div className="flex items-center justify-end gap-3 w-full pt-2">
-              <button 
+              <button
                 className="px-4 py-2 rounded-md font-medium bg-transparent text-[#AAAAAA] hover:text-white hover:bg-[#333] transition-colors"
                 onClick={() => { setIsPopUpOpen({ ...defaultPopUp, delete: { index: undefined, status: false } }); setIsStop(false); }}
               >
                 Cancel
               </button>
-              <button 
+              <button
                 className="flex items-center justify-center gap-2 px-5 py-2 rounded-md font-medium bg-[#EF4444] text-white hover:bg-[#DC2626] transition-colors shadow-sm"
                 onClick={() => handleDeleteClick(isPopUpOpen.delete.index)}
               >
@@ -346,19 +346,19 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
                 <X size={20} />
               </button>
             </div>
-            
+
             <div className="py-2 text-sm text-[#CCCCCC] leading-relaxed">
               Security settings for this quiz are incomplete. You must update them before you can share or take the test.
             </div>
-            
+
             <div className="flex items-center justify-end gap-3 w-full pt-2">
-              <button 
+              <button
                 className="px-4 py-2 rounded-md font-medium bg-transparent text-[#AAAAAA] hover:text-white hover:bg-[#333] transition-colors"
                 onClick={() => { setIsPopUpOpen({ ...defaultPopUp, link: { index: undefined, status: false } }); setIsStop(false); }}
               >
                 Cancel
               </button>
-              <button 
+              <button
                 className="flex items-center justify-center gap-2 px-5 py-2 rounded-md font-medium bg-[#DE5833] text-white hover:bg-[#c94f2e] transition-colors shadow-sm"
                 onClick={() => handleUpdateSecuity(isPopUpOpen.link.index)}
               >
@@ -378,12 +378,16 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
                 <Forward size={20} />
                 <span className="font-semibold text-lg">Share Quiz</span>
               </div>
-              <button className="text-[#AAAAAA] hover:text-white transition-colors" onClick={() => { setIsPopUpOpen({ ...defaultPopUp, share: { index: undefined, status: false } }); setIsStop(false); }}>
+              <button
+                className="text-[#AAAAAA] hover:text-white transition-colors"
+                onClick={() => { setIsPopUpOpen({ ...defaultPopUp, share: { index: undefined, status: false } }); setIsStop(false); }}
+              >
                 <X size={20} />
               </button>
             </div>
-            
-            <div className="py-2">
+
+            <div className="py-2 flex flex-col gap-4">
+             
               {viewDetails[isPopUpOpen.share.index].link.status ? (
                 <div className="flex flex-col gap-2 w-full">
                   <div className="flex items-center justify-between w-full">
@@ -396,7 +400,7 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
                     <div className="flex-1 bg-[#1A1A1A] border border-[#444] rounded-md p-2.5 text-sm text-[#EEEEEE] truncate">
                       {viewDetails[isPopUpOpen.share.index].link.address}
                     </div>
-                    <button 
+                    <button
                       className="p-2.5 bg-[#333] hover:bg-[#444] border border-[#444] rounded-md text-[#EEEEEE] transition-colors"
                       onClick={() => handleCopyClick(viewDetails[isPopUpOpen.share.index].link.address)}
                       title="Copy to clipboard"
@@ -413,10 +417,34 @@ export default function ListQuizz({ defaultPopUp, isPopUpOpen, setIsPopUpOpen })
                   <p className="text-sm text-[#CCCCCC]">This link is currently inactive. Click the edit (pencil) icon to activate it.</p>
                 </div>
               )}
+
+        
+              <div className="flex items-center gap-3 my-1">
+                <div className="h-px bg-[#444] flex-1"></div>
+                <span className="text-[11px] text-[#888] uppercase tracking-wider font-medium">Or share with quiz id (Recommended)</span>
+                <div className="h-px bg-[#444] flex-1"></div>
+              </div>
+              
+
+              <div className="flex flex-col gap-2 w-full">
+                <span className="text-sm font-medium text-[#AAAAAA]">Quiz ID</span>
+                <div className="flex items-center gap-2 w-full">
+                  <div className="flex-1 bg-[#1A1A1A] border border-[#444] rounded-md p-2.5 text-sm text-[#DE5833] font-mono tracking-wider truncate">
+                    {viewDetails[isPopUpOpen.share.index].id}
+                  </div>
+                  <button
+                    className="p-2.5 bg-[#333] hover:bg-[#444] border border-[#444] rounded-md text-[#EEEEEE] transition-colors"
+                    onClick={() => handleCopyClick(viewDetails[isPopUpOpen.share.index].id)}
+                    title="Copy Quiz ID"
+                  >
+                    <Copy size={18} />
+                  </button>
+                </div>
+              </div>
             </div>
-            
+
             <div className="flex items-center justify-end w-full pt-2">
-              <button 
+              <button
                 className="px-5 py-2 rounded-md font-medium bg-[#333] border border-[#444] text-[#EEEEEE] hover:bg-[#444] transition-colors"
                 onClick={() => { setIsPopUpOpen({ ...defaultPopUp, share: { index: undefined, status: false } }); setIsStop(false); }}
               >

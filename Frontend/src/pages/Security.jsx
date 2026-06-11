@@ -62,7 +62,6 @@ export default function Security() {
     setIsLoading({ ...defaultLoading, data: true });
     const ans = await validateUser();
     if (ans === false) {
-      toast.error("Please Login To Use!");
       setLoginPopUp(true);
     } else {
       setLoginPopUp(false);

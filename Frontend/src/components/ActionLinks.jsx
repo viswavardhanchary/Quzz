@@ -7,7 +7,8 @@ export default function ActionLinks({ handleHamClick, id, setId }) {
   const logoutUser = () => {
     localStorage.clear();
     setId(null);
-    navigate("/");
+    window.location.href = "/";
+
   };
 
 

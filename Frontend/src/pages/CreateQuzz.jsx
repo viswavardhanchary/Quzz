@@ -34,7 +34,6 @@ export default function CreateQuzz() {
     async function check() {
       const ans = await validateUser();
       if (ans === false) {
-        toast.error("Please Login To Use!");
         setIsPopUpOpen({ ...defaultPopUp, login: true });
       } else {
         setIsPopUpOpen({ ...defaultPopUp, login: false });

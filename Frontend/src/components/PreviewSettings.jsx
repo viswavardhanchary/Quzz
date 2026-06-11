@@ -1,4 +1,4 @@
-import { Copy, ExternalLink, ShieldCheck, Clock, Monitor, Video, Key, Calendar, Users, Award, FileText, CheckCircle2, BarChart, Trophy, Link as LinkIcon } from "lucide-react";
+import { Copy, ExternalLink, ShieldCheck, Clock, Monitor, Video, Key, Calendar, Users, Award, FileText, CheckCircle2, BarChart, Trophy, Link as LinkIcon, PencilRuler } from "lucide-react";
 import { toast } from 'react-toastify';
 import { Link } from "react-router-dom";
 import { WEBSITE_LINK } from "../utils/constants";
@@ -52,7 +52,7 @@ export default function PreviewSettings({ data }) {
           
          
           <div className="flex flex-col w-full bg-[#1A1A1A] border border-[#333333] rounded-md p-4 sm:p-5">
-            <h3 className="text-xs font-bold tracking-wider text-[#888888] uppercase mb-2">Access & Links</h3>
+            <h3 className="text-lg font-bold tracking-wider text-[#888888] uppercase mb-2">Access & Links</h3>
             
             <SettingRow 
               icon={ExternalLink} 
@@ -72,6 +72,19 @@ export default function PreviewSettings({ data }) {
               icon={FileText} 
               label="Quiz Name" 
               value={data.name} 
+            />
+
+             <SettingRow 
+              icon={PencilRuler} 
+              label="Quiz ID" 
+              value={data.id} 
+              action={
+                data.id && (
+                  <button onClick={() => handleCopyClick(data.id, "ID")} className="text-[#888] hover:text-[#DE5833] transition-colors" title="Copy Link">
+                    <Copy size={16} />
+                  </button>
+                )
+              }
             />
             
             <SettingRow 
@@ -145,7 +158,7 @@ export default function PreviewSettings({ data }) {
 
    
           <div className="flex flex-col w-full bg-[#1A1A1A] border border-[#333333] rounded-md p-4 sm:p-5">
-            <h3 className="text-xs font-bold tracking-wider text-[#888888] uppercase mb-2">Proctoring Rules</h3>
+            <h3 className="text-lg font-bold tracking-wider text-[#888888] uppercase mb-2">Proctoring Rules</h3>
             
             <SettingRow 
               icon={Monitor} 
@@ -182,7 +195,7 @@ export default function PreviewSettings({ data }) {
 
    
           <div className="flex flex-col w-full bg-[#1A1A1A] border border-[#333333] rounded-md p-4 sm:p-5">
-            <h3 className="text-xs font-bold tracking-wider text-[#888888] uppercase mb-2">Grading System</h3>
+            <h3 className="text-lg font-bold tracking-wider text-[#888888] uppercase mb-2">Grading System</h3>
             
             <SettingRow 
               icon={Award} 
